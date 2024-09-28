@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenGrocer Login</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(45deg, #007f0e 50%, #d38e1b 50%);
+        }
+        .login-container {
+            background-color: #006600;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            width: 300px;
+        }
+        .login-container img {
+            width: 80px;
+            margin-bottom: 20px;
+        }
+        .login-container h2 {
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        .input-box {
+            display: block;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            width: 100%;
+            font-size: 14px;
+        }
+        .input-box::placeholder {
+            color: #666;
+        }
+        .btn-login, .btn-signup, .btn-guest {
+            display: block;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            width: 100%;
+            font-size: 14px;
+        }
+        .btn-login {
+            background-color: #fff;
+            color: #000;
+        }
+        .btn-signup {
+            background-color: #e60000;
+            color: #fff;
+        }
+        .btn-guest {
+            background-color: #fdbf1d;
+            color: #fff;
+        }
+        .forgot-password {
+            color: #fff;
+            font-size: 12px;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <img src="/static/img/logo.png" alt="GreenGrocer Logo"> 
+        <h2>GreenGrocer</h2>
+        <form method="POST" action="{{ url_for('login') }}">
+            <!-- CSRF token for protection -->
+            {{ form.hidden_tag() }}
+            
+            <!-- Username field -->
+            <input type="text" name="username" class="input-box" placeholder="Username" required>
+            
+            <!-- Password field -->
+            <input type="password" name="password" class="input-box" placeholder="Password" required>
+            
+            <!-- Login button -->
+            <button type="submit" class="btn-login">LOGIN</button>
+        </form>
+
+        <!-- our sign up button below -->
+        <a href="{{ url_for('register') }}">
+            <button type="button" class="btn-signup">SIGN UP</button>
+        </a>
+
+        <!-- heres the login implementatin for the guest -->
+        <a href="{{ url_for('guest_login') }}">
+            <button type="button" class="btn-guest">LOGIN AS GUEST</button>
+        </a>
+       
+
+
+        <a href="#" class="forgot-password">Forgot password?</a>
+    </div>
+</body>
+</html>

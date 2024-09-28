@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - FreshFoods190</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .register-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .register-container h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #4caf50;
+        }
+
+        .form-control {
+            margin-bottom: 20px;
+        }
+
+        .btn-register {
+            background-color: #4caf50;
+            color: white;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .login-link {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="register-container">
+    <h1>Create an Account</h1>
+    <form method="POST" action="{{ url_for('register') }}">
+        <!-- CSRF token for form protection -->
+        {{ form.hidden_tag() }}
+
+        <!-- here we setting username -->
+        {{ form.username.label }}
+        {{ form.username(class="form-control", placeholder="Username") }}
+
+        <!-- and password form here -->
+        {{ form.password.label }}
+        {{ form.password(class="form-control", placeholder="Password") }}
+
+        <!-- the button to register below -->
+        {{ form.submit(class="btn btn-register") }}
+    </form>
+
+    <div class="text-center login-link">
+        Already have an account? <a href="{{ url_for('login') }}">Log in</a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
