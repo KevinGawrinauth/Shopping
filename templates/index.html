@@ -11,7 +11,6 @@
             font-family: Arial, sans-serif;
             padding-bottom: 70px;
         }
-        /* Navbar styling */
         .navbar {
             background-color: #fff;
             padding: 10px;
@@ -123,8 +122,6 @@
         .nav-item span {
             font-size: 14px;
         }
-
-        /* Footer styling */
         .footer {
             margin-top: 40px;
             background-color: #fff;
@@ -144,48 +141,130 @@
             width: 50px;
             margin-left: 10px;
         }
+        .btn-search {
+            padding: 8px 16px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar d-flex justify-content-between">
-        <div class="navbar-brand">
-            <a href="{{ url_for('home') }}">
-                <img src="/static/img/greengrocer_logo.png" alt="GreenGrocer Logo">
-            </a>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Add custom CSS to style the dropdown button -->
+<style>
+    .custom-dropdown-button {
+        background-color: #198754; /* Light Green */
+        color: white;
+        border-color: #198754; /* Matching border color */
+    }
+
+    .custom-dropdown-button:hover {
+        background-color: #228B22; /* Darker Green on hover */
+        color: white;
+        border-color: #228B22; /* Matching border color on hover */
+    }
+    
+</style>
+
+<!-- Navbar with custom dropdown button -->
+<nav class="navbar d-flex justify-content-between">
+    <div class="navbar-brand">
+        <a href="{{ url_for('home') }}">
+            <img src="/static/img/GreenGrocer.png" alt="GreenGrocer Logo" style="width: 250px; height: auto;">
+        </a>
+    </div>
+    <div class="search-bar">
+        <div class="dropdown">
+            <button class="btn custom-dropdown-button dropdown-toggle" type="button" id="categoryDropdownButton" data-bs-toggle="dropdown" aria-expanded="false">
+                All Categories
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="categoryDropdownButton">
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Vegetables')">Vegetables</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Fruits')">Fruits</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Meats')">Meats</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Frozen')">Frozen</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Dairy')">Dairy</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Bread')">Bread</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Canned')">Canned</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Snacks')">Snacks</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Drinks')">Drinks</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectCategory('Personal Care')">Personal Care</a></li>
+            </ul>
         </div>
-        <div class="search-bar">
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-                    All Categories
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                    <li><a class="dropdown-item" href="#">Vegetables</a></li>
-                    <li><a class="dropdown-item" href="#">Fruits</a></li>
-                    <li><a class="dropdown-item" href="#">Meat</a></li>
-                    <li><a class="dropdown-item" href="#">Frozen</a></li>
-                </ul>
-            </div>
-            <input type="text" placeholder="Search for items...">
-            <button class="btn btn-success ms-2"><i class="fas fa-search"></i></button>
-        </div>
-        <div class="d-flex align-items-center">
-            <div class="nav-item dropdown">
-                <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-                    your mama 44
-                </a>
-                <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                    <li><a class="dropdown-item" href="#">Settings</a></li>
-                    <li><a class="dropdown-item" href="#">Logout</a></li>
-                </ul>
-            </div>
-            <div class="ms-3">
-                <button class="accessibility-btn" onclick="alert('Accessibility settings')">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/universal-access.png" alt="Accessibility Icon">
-                </button>
-            </div>
-        </div>
-    </nav>
+        <input type="text" id="searchInput" placeholder="Search for items..." style="padding: 10px 5px; font-size: 1rem; width: 650px;">
+        <button class="btn btn-success" style="padding: 8px 20px; font-size: 1rem; margin-left: 5px;" onclick="searchItems()">Search</button>
+    <i class="fas fa-search me-2"></i>
+        </button>
+    </div>
+    <div class="nav-item dropdown" style="position: relative; left: -20px;">
+        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false"> 
+            {{username}}
+        </a>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+            <li><a class="dropdown-item" href="{{ url_for('settings') }}">Settings</a></li>
+            <li>
+                <form action="{{ url_for('logout') }}" method="POST" class="signout-btn">
+                    {{ form.hidden_tag() }} <!-- CSRF token -->
+                    <button class="dropdown-item" type="submit">Sign Out</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+    
+    
+
+    <div class="ms-3">
+        <button class="accessibility-btn" onclick="toggleAccessibilitySettings()">
+            <img src="static/img/AccessabilityButton.png" alt="Accessibility Icon" style="width: 60px; height: 60px;">
+        </button>
+    </div>
+     </div>
+</nav>
+
+<!-- JavaScript to handle the search functionality -->
+<script>
+    let selectedCategory = 'All Categories';
+
+    function selectCategory(category) {
+        selectedCategory = category;
+        document.getElementById('categoryDropdownButton').textContent = category;
+    }
+
+    function searchItems() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        
+        // Product to category mapping
+        const productMapping = {
+            "chicken": "Meats", "beef": "Meats", "pork": "Meats", "turkey": "Meats", "bacon": "Meats", "lamb": "Meats",
+            "apple": "Fruits", "banana": "Fruits", "orange": "Fruits", "grape": "Fruits", "pineapple": "Fruits",
+            "carrot": "Vegetables", "broccoli": "Vegetables", "lettuce": "Vegetables", "spinach": "Vegetables",
+            "milk": "Dairy", "cheese": "Dairy", "yogurt": "Dairy", "butter": "Dairy", "cream": "Dairy", "eggs": "Dairy",
+            "bread": "Bread", "bagel": "Bread", "bun": "Bread", "croissant": "Bread", "muffin": "Bread", "roll": "Bread",
+            "soda": "Drinks", "coffee": "Drinks", "tea": "Drinks", "juice": "Drinks", "water": "Drinks", "smoothie": "Drinks",
+            "ice cream": "Frozen", "frozen pizza": "Frozen", "frozen vegetables": "Frozen", "frozen fries": "Frozen",
+            "beans": "Canned", "canned soup": "Canned", "canned tomatoes": "Canned", "canned corn": "Canned",
+            "chips": "Snacks", "cookies": "Snacks", "popcorn": "Snacks", "crackers": "Snacks", "pretzels": "Snacks",
+            "shampoo": "Personal Care", "toothpaste": "Personal Care", "soap": "Personal Care", "lotion": "Personal Care"
+        };
+
+        // Determine the mapped category of the query
+        const mappedCategory = productMapping[query];
+
+        // Check if the query is mapped to a category and matches the selected category
+        if (mappedCategory) {
+            if (selectedCategory === 'All Categories' || selectedCategory === mappedCategory) {
+                window.location.href = `/products/${mappedCategory}?query=${query}`;
+            } else {
+                alert(`"${query}" is not available in the selected category "${selectedCategory}".`);
+            }
+        } else {
+            alert("No items found for the entered product name.");
+        }
+    }
+</script>
+
 
     <div class="container mt-5">
         <h2 class="text-center">Explore Categories</h2>
@@ -222,19 +301,19 @@
         <!-- Second Category Section -->
         <div class="category-container">
             <div class="category-card">
-                <a href="/products/Dairy"><img src="/static/img/dairy.jpg" alt="Dairy"></a>
+                <a href="/products/Dairy"><img src="/static/img/milk.png" style="padding: 2px 2px alt="Dairy"></a>
                 <h4>Dairy</h4>
-                <p>10 Items</p>
+               
             </div>
             <div class="category-card">
                 <a href="/products/Bread"><img src="/static/img/bread.jpg" alt="Bread"></a>
                 <h4>Bread</h4>
-                <p>10 Items</p>
+             
             </div>
             <div class="category-card">
                 <a href="/products/Canned"><img src="/static/img/canned_foods.jpg" alt="Canned Foods"></a>
                 <h4>Canned Foods</h4>
-                <p>220 Items</p>
+               
             </div>
             <div class="category-card">
                 <a href="/products/Snacks"><img src="/static/img/snacks.jpg" alt="Snacks"></a>
@@ -273,42 +352,39 @@
         </div>
     </div>
 
-    <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-        <div class="nav-item">
-            <a href="{{ url_for('home') }}">
-                <div class="nav-icon nav-home">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/home.png" alt="Home Icon" />
-                </div>
-                <span>Home</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a href="{{ url_for('view_favorites') }}">
-                <div class="nav-icon nav-favorites">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/star--v1.png" alt="Favorites Icon" />
-                </div>
-                <span>Favorites</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a href="{{ url_for('discounts') }}">
-                <div class="nav-icon nav-discounts">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/discount.png" alt="Discounts Icon" />
-                </div>
-                <span>Discounts</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a href="{{ url_for('view_cart') }}">
-                <div class="nav-icon nav-cart">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/shopping-cart.png" alt="Cart Icon" />
-                </div>
-                <span>Cart</span>
-            </a>
-        </div>
+   <!-- Bottom Navigation -->
+<div class="bottom-nav">
+    <div class="nav-item">
+        <a href="{{ url_for('home') }}">
+            <div class="nav-icon nav-home">
+                <img src="https://img.icons8.com/ios-filled/50/000000/home.png" alt="Home Icon" />
+            </div>
+            <span>Home</span>
+        </a>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <div class="nav-item">
+        <a href="{{ url_for('view_favorites') }}">
+            <div class="nav-icon nav-favorites">
+                <img src="https://img.icons8.com/ios-filled/50/000000/star--v1.png" alt="Favorites Icon" />
+            </div>
+            <span>Favorites</span>
+        </a>
+    </div>
+    <div class="nav-item">
+        <a href="{{ url_for('discounts') }}">
+            <div class="nav-icon nav-discounts">
+                <img src="https://img.icons8.com/ios-filled/50/000000/discount.png" alt="Discounts Icon" />
+            </div>
+            <span>Discounts</span>
+        </a>
+    </div>
+    <div class="nav-item">
+        <a href="{{ url_for('view_cart') }}">
+            <div class="nav-icon nav-cart">
+                <img src="https://img.icons8.com/ios-filled/50/000000/shopping-cart.png" alt="Cart Icon" />
+            </div>
+            <!-- Display Cart count -->
+            <span>Cart ({{ cart_count }})</span>
+        </a>
+    </div>
+</div>

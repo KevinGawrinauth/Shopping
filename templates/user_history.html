@@ -1,0 +1,20 @@
+<!-- user_history.html -->
+<h2>Order History</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Payment Method</th>
+            <th>Discount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in order_history %}
+        <tr>
+            <td>{{ order.date }}</td>
+            <td>{{ order.payment }}</td>
+            <td>{{ order.discount }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

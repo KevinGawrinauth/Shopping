@@ -33,17 +33,20 @@
                             <h5 class="card-title">{{ product['description'] }}</h5>
                             <p class="card-text">
                                 Price: 
-                                {% if product['items'] and product['items'][0]['price'] and product['items'][0]['price']['regular'] %}
+                                {% if product['items'] and product['items'][0].get('price') and product['items'][0]['price'].get('regular') %}
                                     ${{ product['items'][0]['price']['regular'] }}
                                 {% else %}
                                     Not Available
                                 {% endif %}
                             </p>
+                            
                             <form action="{{ url_for('add_to_cart', product_id=product['id']) }}" method="POST">
                                 <input type="hidden" name="product_name" value="{{ product['description'] }}">
                                 <input type="hidden" name="product_price" value="{{ product['items'][0]['price']['regular'] if product['items'][0]['price'] else 'N/A' }}">
-                                <button type="submit" class="btn btn-primary">Add to Cart</button>
+                                <input type="hidden" name="product_image" value="{{ product['images'][0]['sizes'][0]['url'] if product['images'] else '' }}">
+                                <button type="submit" class="btn btn-primary btn-add-cart">Add to Cart</button>
                             </form>
+                            
                         </div>
                     </div>
                 </div>
@@ -55,4 +58,6 @@
     {% include 'bottom_navigation.html' %}
 
 </body>
+{% include 'bottom_navigation.html' %}
+
 </html>
