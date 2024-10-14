@@ -70,6 +70,8 @@ class RegistrationForm(FlaskForm):
 # Form for the logout button 
 class LogoutForm(FlaskForm):
     submit = SubmitField('Sign Out')
+    
+    
 
 # Fetching our Kroger OAuth token
 def get_kroger_token(client_id, client_secret):
@@ -110,19 +112,42 @@ def update_user():
         flash("User not found.", "danger")
     
     return redirect(url_for('settings'))
+import requests
 
-@app.route('/user_history')
+@app.route('/orderhistory')
 @login_required
-def user_history():
+def orderhistory():
+    # Sample order data with renamed attribute to avoid conflict
     order_history = [
-        {"date": "2024-10-01", "payment": "Visa", "discount": "10%"},
-        {"date": "2024-09-15", "payment": "PayPal", "discount": "5%"}
+        {
+            "date": "2024-10-12",
+            "order_items": [
+                {"name": "Sample Item 1", "price": 5.00},
+                {"name": "Sample Item 2", "price": 7.50}
+            ],
+            "total_price": 12.50
+        },
+        {
+            "date": "2024-10-13",
+            "order_items": [
+                {"name": "Sample Item 3", "price": 3.00},
+                {"name": "Sample Item 4", "price": 6.50}
+            ],
+            "total_price": 9.50
+        }
     ]
-    return render_template('user_history.html', order_history=order_history)
 
-@app.route('/faq')
-def faq():
-    return render_template('faq.html')
+    return render_template('orderhistory.html', order_history=order_history)
+
+
+
+
+@app.route('/settings')
+@login_required
+def settings():
+    users = read_users()
+    user_data = users.get(current_user.id, {})
+    return render_template('settings.html', user_data=user_data)
 
 # this is our user login route 
 @app.route('/login', methods=['GET', 'POST'])
@@ -139,13 +164,6 @@ def login():
         else:
             flash('Invalid username or password')
     return render_template('login.html', form=form)
-
-@app.route('/settings')
-@login_required
-def settings():
-    users = read_users()
-    user_data = users.get(current_user.id, {})
-    return render_template('settings.html', user_data=user_data)
 
 
 # our guest login route
@@ -504,8 +522,31 @@ def process_checkout():
 
     return redirect(url_for('home'))
 
+@app.route('/account_info')
+@login_required
+def account_info():
+    users = read_users()
+    user_data = users.get(current_user.id, {})
+    return render_template('account_info.html', user_data=user_data)
+
+
+
+@app.route('/loyalty_rewards')
+@login_required
+def loyalty_rewards():
+    rewards_info = {
+        "points": 1200,
+        "tier": "Gold",
+        "next_tier_points": 3000
+    }
+    return render_template('loyalty_rewards.html', rewards_info=rewards_info)
+
+@app.route('/faq')
+def faq():
+    return render_template('faq.html')
+
+
 
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-    response = requests.get(url)

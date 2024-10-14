@@ -147,8 +147,42 @@
             display: flex;
             align-items: center;
         }
+        
+        /* Custom dropdown button */
+        .custom-dropdown-button {
+            background-color: #198754;
+            color: white;
+            border-color: #198754;
+        }
+        .custom-dropdown-button:hover {
+            background-color: #228B22;
+            border-color: #228B22;
+        }
+
+        /* Dropdown Menu Styling */
+        .dropdown-item {
+            font-size: 16px;
+            padding: 10px 20px;
+            line-height: 1.5;
+            text-align: left;
+        }
+        .dropdown-menu {
+            min-width: 220px;
+            padding: 0;
+        }
+        .dropdown-item:hover {
+            background-color: #f1f1f1;
+        }
+        .signout-btn .dropdown-item {
+            font-size: 16px;
+            padding: 10px 20px;
+        }
+        .dropdown-menu li {
+            list-style: none;
+        }
     </style>
 </head>
+
 <body>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -164,7 +198,10 @@
         background-color: #228B22; /* Darker Green on hover */
         color: white;
         border-color: #228B22; /* Matching border color on hover */
+    
+        .
     }
+    
     
 </style>
 
@@ -198,23 +235,28 @@
     <i class="fas fa-search me-2"></i>
         </button>
     </div>
-    <div class="nav-item dropdown" style="position: relative; left: -20px;">
-        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false"> 
-            {{username}}
+    <div class="nav-item dropdown" style="position: relative; left: -38px;">
+        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
+            {{ username }}
         </a>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-            <li><a class="dropdown-item" href="{{ url_for('settings') }}">Settings</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('account_info') }}">Account Information</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('orderhistory') }}">Order History</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('loyalty_rewards') }}">Loyalty and Rewards</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('faq') }}">FAQ</a></li>
             <li>
-                <form action="{{ url_for('logout') }}" method="POST" class="signout-btn">
-                    {{ form.hidden_tag() }} <!-- CSRF token -->
-                    <button class="dropdown-item" type="submit">Sign Out</button>
+                <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+                <form id="logout-form" action="{{ url_for('logout') }}" method="POST" style="display: none;">
+                    {% if form is defined %}
+                        {{ form.hidden_tag() }} <!-- CSRF token -->
+                    {% endif %}
                 </form>
             </li>
         </ul>
     </div>
     
     
-
+    <div class="ms-3" style="position: relative; left: -25px;">
     <div class="ms-3">
         <button class="accessibility-btn" onclick="toggleAccessibilitySettings()">
             <img src="static/img/AccessabilityButton.png" alt="Accessibility Icon" style="width: 60px; height: 60px;">
@@ -269,64 +311,65 @@
     <div class="container mt-5">
         <h2 class="text-center">Explore Categories</h2>
 
-        <!-- First Category Section -->
-        <div class="category-container">
-            <div class="category-card">
-                <a href="/products/Vegetables"><img src="/static/img/vegetables.jpg" alt="Vegetables"></a>
-                <h4>Vegetables</h4>
-                <p>220 Items</p>
-            </div>
-            <div class="category-card">
-                <a href="/products/Meats"><img src="/static/img/meats.jpg" alt="Meats"></a>
-                <h4>Meats</h4>
-                <p>10 Items</p>
-            </div>
-            <div class="category-card">
-                <a href="/products/Fruits"><img src="/static/img/fruits.jpg" alt="Fruits"></a>
-                <h4>Fruits</h4>
-                <p>40 Items</p>
-            </div>
-            <div class="category-card">
-                <a href="/products/Drinks"><img src="/static/img/drinks.jpg" alt="Drinks"></a>
-                <h4>Drinks</h4>
-                <p>23 Items</p>
-            </div>
-            <div class="category-card">
-                <a href="/products/Frozen"><img src="/static/img/frozen.jpg" alt="Frozen"></a>
-                <h4>Frozen</h4>
-                <p>3 Items</p>
-            </div>
-        </div>
 
-        <!-- Second Category Section -->
-        <div class="category-container">
-            <div class="category-card">
-                <a href="/products/Dairy"><img src="/static/img/milk.png" style="padding: 2px 2px alt="Dairy"></a>
-                <h4>Dairy</h4>
-               
+    
+            <!-- First Category Section -->
+            <div class="category-container">
+                <a href="/products/Vegetables" class="category-card">
+                    <img src="/static/img/vegetables.png" style="height: 160px;" alt="Vegetables">
+                    <h4>Vegetables</h4>
+                    <p>220 Items</p>
+                </a>
+                <a href="/products/Meats" class="category-card">
+                    <img src="/static/img/meats.png" style="height: 150px; width: 150px; margin-bottom: 18px;" alt="Meats">
+                    <h4>Meats</h4>
+                    <p>10 Items</p>
+                </a>
+                <a href="/products/Fruits" class="category-card">
+                    <img src="/static/img/fruits.png" style="width: 150px; height: 120px; margin-bottom: 48px;" alt="Fruits">
+                    <h4>Fruits</h4>
+                    <p>40 Items</p>
+                </a>
+                <a href="/products/Drinks" class="category-card">
+                    <img src="/static/img/drinks.png" style="height: 150px; width: 150px; margin-bottom: 18px;" alt="Drinks">
+                    <h4>Drinks</h4>
+                    <p>23 Items</p>
+                </a>
+                <a href="/products/Frozen" class="category-card">
+                    <img src="/static/img/frozen.png" style="width: 160px; height: 140px; margin-bottom: 28px;" alt="Frozen">
+                    <h4>Frozen</h4>
+                    <p>3 Items</p>
+                </a>
             </div>
-            <div class="category-card">
-                <a href="/products/Bread"><img src="/static/img/bread.jpg" alt="Bread"></a>
-                <h4>Bread</h4>
-             
+            
+            <!-- Second Category Section -->
+            <div class="category-container">
+                <a href="/products/Dairy" class="category-card">
+                    <img src="/static/img/milk.png" style="width: 150px; height: 150px;" alt="Dairy">
+                    <h4>Dairy</h4>
+                    <p>X Items</p>
+                </a>
+                <a href="/products/Bread" class="category-card">
+                    <img src="/static/img/bread.png" style="width: 150px; height: 120px; margin-bottom: 23px; margin-top: 15px;" alt="Bread">
+                    <h4>Bread</h4>
+                    <p>X Items</p>
+                </a>
+                <a href="/products/Canned" class="category-card">
+                    <img src="/static/img/canned_foods.png" style="width: 160px; height: 130px; margin-bottom: 28px;" alt="Canned Foods">
+                    <h4>Canned Foods</h4>
+                    <p>X Items</p>
+                </a>
+                <a href="/products/Snacks" class="category-card">
+                    <img src="/static/img/snacks.png" style="width: 160px; height: 130px; margin-bottom: 28px;" alt="Snacks">
+                    <h4>Snacks</h4>
+                    <p>50 Items</p>
+                </a>
+                <a href="/products/PersonalCare" class="category-card">
+                    <img src="/static/img/personalcare.png" style="width: 140px; height: 120px; margin-bottom: 35px;" alt="Personal Care">
+                    <h4>Personal Care</h4>
+                    <p>30 Items</p>
+                </a>
             </div>
-            <div class="category-card">
-                <a href="/products/Canned"><img src="/static/img/canned_foods.jpg" alt="Canned Foods"></a>
-                <h4>Canned Foods</h4>
-               
-            </div>
-            <div class="category-card">
-                <a href="/products/Snacks"><img src="/static/img/snacks.jpg" alt="Snacks"></a>
-                <h4>Snacks</h4>
-                <p>50 Items</p>
-            </div>
-            <div class="category-card">
-                <a href="/products/PersonalCare"><img src="/static/img/personal_care.jpg" alt="Personal Care"></a>
-                <h4>Personal Care</h4>
-                <p>30 Items</p>
-            </div>
-        </div>
-    </div>
 
     <!-- Footer with Payment Methods and Social Icons -->
     <div class="footer">

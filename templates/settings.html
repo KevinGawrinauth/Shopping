@@ -6,6 +6,7 @@
     <title>User Settings</title>
 </head>
 <body>
+    {% include 'topheader.html' %}
     <h1>Settings</h1>
     <p>Manage your account information here.</p>
     <form method="POST" action="{{ url_for('update_user') }}">

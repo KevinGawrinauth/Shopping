@@ -73,8 +73,9 @@
 </head>
 <body>
     <div class="login-container">
-        <img src="/static/img/logo.png" alt="GreenGrocer Logo"> 
+     
         <h2>GreenGrocer</h2>
+        <img src="/static/img/GreenGrocerlogo.png" alt="GreenGrocer Logo"> 
         <form method="POST" action="{{ url_for('login') }}">
             <!-- CSRF token for protection -->
             {{ form.hidden_tag() }}
