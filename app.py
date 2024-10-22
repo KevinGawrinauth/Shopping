@@ -18,7 +18,7 @@ app = Flask(__name__)
 app.secret_key = b'\xef\xd4\x16\x98h\xc6\xdd\xc3\xc6\xce\x02\xd6@o\x8a|\x08\x1c\xd6\\X{\xeex'
 csrf = CSRFProtect(app)  # Enable CSRF protection
 
-# We created a file to store user data (this simulates a database using mysql lite)
+# We created a file to store user data (this simulates a database using mysql lite) x
 USER_FILE = 'user_storage.json'
 
 # Our Kroger API credentials 
@@ -374,8 +374,18 @@ def update_quantity(index, operation):
 @app.route('/cart')
 @login_required
 def view_cart():
-    return render_template('cart.html')  # Ensure this template is correctly set up
+    cart = session.get('cart', [])
 
+    # Convert price to float
+    for item in cart:
+        try:
+            item['price'] = float(item['price'])  # Ensure price is a float
+        except ValueError:
+            item['price'] = 0.00  # Handle invalid prices
+
+    total_amount = sum(item['price'] * item['quantity'] for item in cart)
+    
+    return render_template('cart.html', cart=cart, total_amount=total_amount)
 
 
 
@@ -545,6 +555,19 @@ def loyalty_rewards():
 def faq():
     return render_template('faq.html')
 
+
+@app.route('/remove_item/<int:index>', methods=['POST'])
+@login_required
+def remove_item(index):
+    if 'cart' in session:
+        try:
+            session['cart'].pop(index)
+            session.modified = True
+            flash("Item removed from cart.", "success")
+        except IndexError:
+            flash("Item not found in the cart.", "danger")
+    
+    return redirect(url_for('view_cart'))
 
 
 
