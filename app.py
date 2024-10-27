@@ -8,15 +8,81 @@ from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired
 import json
 import os
-
-import requests
-
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_mail import Mail, Message
+import os
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 
 # First we are going to initialize the Flask app
 app = Flask(__name__)
 app.secret_key = b'\xef\xd4\x16\x98h\xc6\xdd\xc3\xc6\xce\x02\xd6@o\x8a|\x08\x1c\xd6\\X{\xeex'
 csrf = CSRFProtect(app)  # Enable CSRF protection
+# Configure Flask-Mail using environment variables
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() in ['true', '1', 'yes']
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+# Initialize Flask-Mail
+mail = Mail(app)
+import os
+
+import requests
+import json
+sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+def send_direct_email(to_email):
+    url = "https://api.sendgrid.com/v3/mail/send"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('SENDGRID_API_KEY')}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "personalizations": [
+            {
+                "to": [{"email": to_email}],
+                "dynamic_template_data": {
+                    "reset_url": "http://127.0.0.1:5000/reset-password",  # Guys this is temporary url for local reset
+                    "username": to_email  
+                }
+            }
+        ],
+        "from": {"email": "kgawrinauth1@pride.hofstra.edu"},
+        "template_id": "d-9c2c93acfa0e40cbbeea3cf01582af1b"  # our custom template using the sendgrid api we made
+    }
+    
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    print("Direct API call status:", response.status_code)
+    print("Response text:", response.text)
+
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password_page():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        new_password = request.form.get('new_password')
+        
+       
+        users = read_users()
+        
+
+        for username, user_info in users.items():
+            if user_info.get('email') == email:
+               
+                user_info['password'] = new_password
+                write_users(users)  
+                flash('Password updated successfully!', 'success')
+                return redirect(url_for('login'))
+        
+        flash('Email not found. Please check and try again.', 'danger')
+
+
+    return render_template('reset_password_updated.html')
+
+
 
 # We created a file to store user data (this simulates a database using mysql lite) x
 USER_FILE = 'user_storage.json'
@@ -194,20 +260,33 @@ def register():
     
     return render_template('register.html', form=form)
 
-@app.route('/reset_password', methods=['GET', 'POST'])
+@app.route('/forgot-password', methods=['GET', 'POST'])
 def reset_password():
     if request.method == 'POST':
+        # Get the email entered in the form
         email = request.form.get('email')
-        
-        # Logic to verify the email and send a reset password link(not implemented fully will do so later)
-        if email:
-            flash('Password reset instructions have been sent to your email.', 'info')
-        else:
-            flash('Invalid email address!', 'danger')
+        print(f"Email entered for reset: {email}")
+
+        # Load the users and search for the email in the JSON structure
+        users = read_users()
+        user_found = False
+        for username, user_data in users.items():
+            if user_data.get('email') == email:
+                user_found = True
+                send_direct_email(email)
+                flash('Password reset instructions have been sent to your email.', 'info')
+                break
+
+        if not user_found:
+            flash('Email address not found.', 'danger')
+
+        # Redirect to the login page or another confirmation page
         return redirect(url_for('login'))
 
-    # sets the GET request, which render the forgot password page
+    # Render the forgot password page for GET requests
     return render_template('forgot_password.html')
+
+
 
 @app.route('/')
 @login_required
@@ -277,7 +356,7 @@ def get_products(category):
     params = {
         'filter.term': f"{search_term} {query}" if query else search_term,
         'filter.locationId': default_location_id,  # Include the locationId for pricing
-        'filter.limit': 50
+        'filter.limit': 5
     }
 
     response = requests.get(search_url, headers=headers, params=params)
@@ -304,7 +383,7 @@ def get_location_products(location_id):
     # Fetch products with location-specific pricing
     params = {
         'filter.locationId': location_id,  # Include the locationId for store-specific pricing
-        'filter.limit': 100
+        'filter.limit': 5
     }
 
     response = requests.get(search_url, headers=headers, params=params)
@@ -412,7 +491,7 @@ def discounts():
     # Fetch products with discount or promo
     params = {
         'filter.term': 'on sale',  # Filters for items on sale
-        'filter.limit': 10  # Number of items to display
+        'filter.limit': 5  # Number of items to display
     }
 
     response = requests.get(search_url, headers=headers, params=params)
@@ -470,7 +549,7 @@ def search():
     
     params = {
         'filter.term': query,
-        'filter.limit': 20
+        'filter.limit': 5
     }
     if category_search_term:
         params['filter.term'] += f" {category_search_term}"
