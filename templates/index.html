@@ -21,9 +21,11 @@
         }
         .nav-item .dropdown-toggle {
             color: #000;
+            
         }
         .nav-item .dropdown-menu {
             background-color: white;
+            
         }
         .search-bar {
             display: flex;
@@ -32,27 +34,36 @@
             margin-left: 20px;
             width: 70%;
         }
+
         .search-bar input {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
         }
-        .accessibility-btn {
-            background-color: #ffd700;
-            color: #000;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
-        .accessibility-btn img {
-            width: 24px;
-            height: 24px;
-        }
+    
+    .location-dropdown {
+        position: absolute;
+        top: 45px;
+        right: 250px; /* Adjust this to place it closer to the accessibility button */
+        z-index: 1;
+        width: 175px;
+    }
+    .accessibility-btn {
+        background-color: #ffd700;
+        color: #000;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+    }
+    .accessibility-btn img {
+        width: 200px;
+        height: 100px;
+    }
         .category-container {
             display: flex;
             flex-wrap: wrap;
@@ -136,6 +147,7 @@
         .nav-item {
             flex-grow: 1;
             text-align: center;
+            right: -75px;
         }
         .nav-item a {
             text-decoration: none;
@@ -231,20 +243,59 @@
                 <li><a class="dropdown-item" href="{{ url_for('loyalty_rewards') }}">Loyalty and Rewards</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('faq') }}">FAQ</a></li>
                 <form action="{{ url_for('logout') }}" method="POST" class="signout-btn d-flex">
-                    {{ form.hidden_tag() }} <!-- CSRF token -->
                     <button class="dropdown-item w-100 text-start" type="submit">Sign Out</button>
                 </form>
             </ul>
         </div>
 
         <!-- Accessibility Button -->
-        <div class="ms-3">
-            <button class="accessibility-btn" onclick="toggleAccessibilitySettings()">
-                <img src="/static/img/AccessabilityButton.png" alt="Accessibility Icon" style="width: 60px; height: 60px;">
-            </button>
+        <div class="accessibility-btn">
+            <img src="/static/img/AccessabilityButton.png" alt="Accessibility Icon" style="width: 24px; height: 24px;">
+        </div>
+
+        <!-- Location Dropdown positioned in top-right corner -->
+        <div class="location-dropdown">
+            <select id="locationDropdown" class="form-select form-select-sm" onchange="changeLocation()">
+                <option value="">Select Location</option>
+                {% for location in locations %}
+                    <option value="{{ location['locationId'] }}">
+                        {{ location['name'] }} - {{ location['address']['city'] }}
+                    </option>
+                {% endfor %}
+            </select>
         </div>
     </nav>
 
+
+<script>
+    function changeLocation() {
+        const locationId = document.getElementById("locationDropdown").value;
+        if (locationId) {
+            window.location.href = `/set_location?location_id=${locationId}`;
+        }
+    }
+</script>
+<script>
+    document.getElementById('location').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        document.getElementById('location_name').value = selectedOption.getAttribute('data-name');
+    });
+</script>
+
+
+            
+    
+     
+    </nav>
+    <script>
+        function changeLocation() {
+            const locationId = document.getElementById("locationDropdown").value;
+            if (locationId !== "Select Location") {
+                window.location.href = `/set_location?location_id=${locationId}`;
+            }
+        }
+    </script>
+    
     <!-- JavaScript to handle the search functionality -->
     <script>
         let selectedCategory = 'All Categories';

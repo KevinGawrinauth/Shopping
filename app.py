@@ -91,10 +91,148 @@ USER_FILE = 'user_storage.json'
 client_id = 'kevingawrinauth-b1629c2310698a009e85d726fbc0e9aa8264849196508842534'
 client_secret = 'fpfEnrPkQnQcWGySAoig8G6Up1ZosRbV8u0LrKSd'
 
-# Flask-Login
+# Initialize Flask-Login
 login_manager = LoginManager()
-login_manager.login_view = 'login'  
+login_manager.login_view = 'login'
 login_manager.init_app(app)
+def get_kroger_token(client_id, client_secret):
+    token_url = "https://api.kroger.com/v1/connect/oauth2/token"
+    data = {
+        'grant_type': 'client_credentials',
+        'scope': 'product.compact'
+    }
+    auth = (client_id, client_secret)
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+    response = requests.post(token_url, headers=headers, data=data, auth=auth)
+
+    # Log full response for debugging
+    print("Token Response Status Code:", response.status_code)
+    print("Token Response Text:", response.text)
+
+    # Check for JSON format response
+    if response.status_code == 200:
+        try:
+            return response.json().get('access_token')
+        except ValueError:
+            # In case JSON decoding fails
+            raise Exception("Error decoding JSON response while fetching access token.")
+    else:
+        # Handle error case explicitly
+        raise Exception("Error fetching access token: Response Code " + str(response.status_code) + ", Response Text: " + response.text)
+
+
+@app.route('/locations')
+def fetch_locations():
+    # Get access token
+    access_token = get_kroger_token(client_id, client_secret)
+    location_url = "https://api.kroger.com/v1/locations"
+    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
+    params = {
+        'filter.radiusInMiles': 50,  # Adjusted radius
+        'filter.limit': 250          # Limit to 250 locations
+    }
+    # Make the API call
+    response = requests.get(location_url, headers=headers, params=params)
+    
+    # Logging response for debugging
+    print("Status Code:", response.status_code)
+    print("Response Text:", response.text)
+
+    # Check and parse response
+    if response.status_code == 200:
+        locations = response.json().get('data', [])
+        return render_template('index.html', locations=locations)
+    else:
+        flash("Error fetching locations.", "danger")
+        return redirect(url_for('home'))
+
+@app.route('/')
+@login_required
+def home():
+    # Fetch locations on the homepage load
+    access_token = get_kroger_token(client_id, client_secret)
+    location_url = "https://api.kroger.com/v1/locations"
+    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
+    
+    params = {
+        'filter.zipCode.near': '60153',   # Define your default zip code
+        'filter.radiusInMiles': 100,      # Limit to 100 miles or other limit
+        'filter.limit': 250               # Limit to 250 locations
+    }
+
+    response = requests.get(location_url, headers=headers, params=params)
+    locations = response.json().get('data', []) if response.status_code == 200 else []
+
+    form = LogoutForm()  # Initialize logout form with CSRF protection
+    username = "Guest" if current_user.id == 'guest' else current_user.id
+
+    # Pass locations to the template directly
+    return render_template('index.html', username=username, form=form, locations=locations)
+
+
+@app.route('/set_location')
+@login_required
+def set_location():
+    location_id = request.args.get('location_id')
+    if location_id:
+        session['location_id'] = location_id
+        
+        flash("Location set successfully!", "success")
+        return redirect(url_for('home'))
+    else:
+        flash("Invalid location selected.", "danger")
+        return redirect(url_for('home'))
+
+
+@app.route('/products/<category>')
+@login_required
+def get_products(category):
+    try:
+        access_token = get_kroger_token(client_id, client_secret)
+    except Exception as e:
+        flash("Error fetching access token.", "danger")
+        return redirect(url_for('home'))
+
+    location_id = session.get('location_id', 'default_location')
+
+    search_url = "https://api.kroger.com/v1/products"
+    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
+    query = request.args.get('query', '')
+    # Map display category to search terms
+    category_mapping = {
+        "Vegetables": "vegetables",
+        "Fruits": "fruits",
+        "Meats": "meat",
+        "Frozen": "frozen",
+        "Dairy": "dairy",
+        "Bread": "bread",
+        "Canned": "canned food",
+        "Snacks": "snack",
+        "Drinks": "beverage",
+        "Personal Care": "personal care"
+    }
+
+    search_term = category_mapping.get(category, "")
+    params = {
+        'filter.term': search_term,
+        'filter.locationId': location_id,  # Use selected location ID
+        'filter.limit': 5
+    }
+
+    response = requests.get(search_url, headers=headers, params=params)
+
+    params = {
+        'filter.term': query or category,
+        'filter.locationId': location_id,
+        'filter.limit': 10
+    }
+
+    response = requests.get(search_url, headers=headers, params=params)
+    products = response.json().get('data', []) if response.status_code == 200 else []
+
+    return render_template('products.html', products=products, category=category, query=query)
+
 
 # Disable CSRF for testing
 app.config['WTF_CSRF_ENABLED'] = False
@@ -288,20 +426,26 @@ def reset_password():
 
 
 
-@app.route('/')
-@login_required
 def home():
-    form = LogoutForm()  # here im initializing the logout form with CSRF protection
-    username = "Guest" if current_user.id == 'guest' else current_user.id
-    locations = [
-        {"id": 1, "name": "Long Island - Amityville", "zip_code": "11701"},
-        {"id": 2, "name": "Long Island - Hicksville", "zip_code": "11801"},
-        {"id": 3, "name": "Long Island - Commack", "zip_code": "11725"},
-        {"id": 4, "name": "Long Island - Syosset", "zip_code": "11791"},
-        {"id": 5, "name": "Long Island - Patchogue", "zip_code": "11772"}
-    ]
-    return render_template('index.html', username=username, form=form, locations=locations)
+    # Fetch locations on the homepage load
+    access_token = get_kroger_token(client_id, client_secret)
+    location_url = "https://api.kroger.com/v1/locations"
+    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
+    
+    params = {
+        'filter.zipCode.near': '60153',   # Define your default zip code
+        'filter.radiusInMiles': 100,      # Limit to 100 miles or other limit
+        'filter.limit': 250               # Limit to 250 locations
+    }
 
+    response = requests.get(location_url, headers=headers, params=params)
+    locations = response.json().get('data', []) if response.status_code == 200 else []
+
+    form = LogoutForm()  # Initialize logout form with CSRF protection
+    username = "Guest" if current_user.id == 'guest' else current_user.id
+
+    # Pass locations to the template directly
+    return render_template('index.html', username=username, form=form, locations=locations)
 
 
 # route to view favorites page
@@ -310,89 +454,11 @@ def home():
 def view_favorites():
     return render_template('favorites.html')
 
-# our set predefined Long Island locations (Fake for demonstration)
-locations = [
-    {"id": 1, "name": "Long Island - Amityville", "zip_code": "11701"},
-    {"id": 2, "name": "Long Island - Hicksville", "zip_code": "11801"},
-    {"id": 3, "name": "Long Island - Commack", "zip_code": "11725"},
-    {"id": 4, "name": "Long Island - Syosset", "zip_code": "11791"},
-    {"id": 5, "name": "Long Island - Patchogue", "zip_code": "11772"},
-]
-
-# route to display store locations
-@app.route('/locations')
-@login_required
-def get_locations():
-    return render_template('locations.html', locations=locations)
-
-@app.route('/products/<category>')
-@login_required
-def get_products(category):
-    query = request.args.get('query', '').lower()
-    access_token = get_kroger_token(client_id, client_secret)
-    search_url = "https://api.kroger.com/v1/products"
-    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
-
-    # Define a default location ID if none is provided (you can replace this with a valid ID)
-    default_location_id = '70300209'  # Replace this with your valid Kroger location ID
-
-    # Map display category to search terms
-    category_mapping = {
-        "Vegetables": "vegetables",
-        "Fruits": "fruits",
-        "Meats": "meat",
-        "Frozen": "frozen",
-        "Dairy": "dairy",
-        "Bread": "bread",
-        "Canned": "canned food",
-        "Snacks": "snack",
-        "Drinks": "beverage",
-        "Personal Care": "personal care"
-    }
-
-    search_term = category_mapping.get(category, "")
-
-    # Fetch products filtered by category and product name with location-specific pricing
-    params = {
-        'filter.term': f"{search_term} {query}" if query else search_term,
-        'filter.locationId': default_location_id,  # Include the locationId for pricing
-        'filter.limit': 5
-    }
-
-    response = requests.get(search_url, headers=headers, params=params)
-
-    if response.status_code == 200:
-        products = response.json().get('data')
-        return render_template('products.html', products=products, category=category, query=query)
-    else:
-        flash("Error fetching products for the selected category.", "danger")
-        return redirect(url_for('home'))
 
 
-@app.route('/locations/<int:location_id>/products')
-@login_required
-def get_location_products(location_id):
-    selected_location = next((loc for loc in locations if loc["id"] == location_id), None)
-    if not selected_location:
-        return jsonify({"error": "Invalid location selected"}), 404
-    
-    access_token = get_kroger_token(client_id, client_secret)
-    search_url = "https://api.kroger.com/v1/products"
-    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
-    
-    # Fetch products with location-specific pricing
-    params = {
-        'filter.locationId': location_id,  # Include the locationId for store-specific pricing
-        'filter.limit': 5
-    }
 
-    response = requests.get(search_url, headers=headers, params=params)
 
-    if response.status_code == 200:
-        products = response.json().get('data')
-        return render_template('products.html', products=products, location=selected_location["name"])
-    else:
-        return jsonify({"error": "Error fetching products for the selected location"}), 500
+
 
 
 @app.route('/add_to_cart', methods=['POST'])
@@ -578,14 +644,24 @@ def checkout():
     # Retrieve cart items from the session
     cart_items = session.get('cart', [])
     
-    # Calculate subtotal
+    
+
     subtotal = sum(float(item['price']) * item['quantity'] for item in cart_items)
-    
-    # Calculate sales tax (8.875% example)
-    sales_tax_rate = 0.08875
+
+    total_quantity = sum(item['quantity'] for item in cart_items)
+
+
+
+    # Calculate sales tax (8.625% example)
+
+    sales_tax_rate = 0.08625
+
     sales_tax = subtotal * sales_tax_rate
-    
+
+
+
     # Calculate total cost
+
     total_cost = subtotal + sales_tax
     
     return render_template('checkout.html', cart_items=cart_items, subtotal=subtotal, sales_tax=sales_tax, total_cost=total_cost)
