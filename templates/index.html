@@ -7,11 +7,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <style>
-        body {
-            background-color: #f7f7f7;
-            font-family: Arial, sans-serif;
-            padding-bottom: 70px;
-        }
+            body {
+                font-family: Arial, sans-serif;
+                background-image: url('/static/img/veggie_background2.0.jpg'); /* Replace white background with an image */
+                background-size: cover; /* Fills the viewport while keeping the image's aspect ratio */
+                background-repeat: no-repeat;
+                background-position: center;
+                background-attachment: fixed; /* Keeps the background fixed during scrolling */
+                color: #333;
+            }
         .navbar {
             background-color: #fff;
             padding: 10px;
@@ -190,13 +194,21 @@
         .nav-item a:hover {
             color: #000;
         }
+
+    /* Show bottom-nav when hovering */
+    .bottom-nav:hover {
+        transform: translateY(0); /* Slide up into view */
+    }
+    
+
+
     </style>
 </head>
-
+{% include 'topheader.html' %}
 <body>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Navbar with custom dropdown inside the search bar -->
+    <!-- commented out the previous index top header because location changing was a problem
+     Navbar with custom dropdown inside the search bar 
     <nav class="navbar d-flex justify-content-between align-items-center">
         <div class="navbar-brand">
             <a href="{{ url_for('home') }}">
@@ -231,7 +243,7 @@
             </div>
         </div>
 
-        <!-- User Dropdown -->
+    
         <div class="nav-item dropdown ms-3">
             <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false"> 
                 {{ username }}
@@ -248,12 +260,13 @@
             </ul>
         </div>
 
-        <!-- Accessibility Button -->
-        <div class="accessibility-btn">
-            <img src="/static/img/AccessabilityButton.png" alt="Accessibility Icon" style="width: 24px; height: 24px;">
+     
+        <div class="accessibility-btn" style="width: 30px; height: 30px;">
+            <img src="/static/img/AccessabilityButton.png" alt="Accessibility Icon" style="width: 50px; height: 50px;">
         </div>
+        
 
-        <!-- Location Dropdown positioned in top-right corner -->
+  
         <div class="location-dropdown">
             <select id="locationDropdown" class="form-select form-select-sm" onchange="changeLocation()">
                 <option value="">Select Location</option>
@@ -266,36 +279,32 @@
         </div>
     </nav>
 
-
 <script>
     function changeLocation() {
-        const locationId = document.getElementById("locationDropdown").value;
+        const locationDropdown = document.getElementById("locationDropdown");
+        const locationId = locationDropdown.value;
+        
         if (locationId) {
+            // Store the selected location ID in sessionStorage
+            sessionStorage.setItem("selectedLocationId", locationId);
+            
+            // Redirect to set the location
             window.location.href = `/set_location?location_id=${locationId}`;
         }
     }
-</script>
-<script>
-    document.getElementById('location').addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        document.getElementById('location_name').value = selectedOption.getAttribute('data-name');
+
+    // When the page loads, set the dropdown to the stored location
+    document.addEventListener("DOMContentLoaded", function() {
+        const locationDropdown = document.getElementById("locationDropdown");
+        const savedLocationId = sessionStorage.getItem("selectedLocationId");
+
+        if (savedLocationId) {
+            locationDropdown.value = savedLocationId;
+        }
     });
 </script>
+-->
 
-
-            
-    
-     
-    </nav>
-    <script>
-        function changeLocation() {
-            const locationId = document.getElementById("locationDropdown").value;
-            if (locationId !== "Select Location") {
-                window.location.href = `/set_location?location_id=${locationId}`;
-            }
-        }
-    </script>
-    
     <!-- JavaScript to handle the search functionality -->
     <script>
         let selectedCategory = 'All Categories';
@@ -383,65 +392,64 @@
             </a>
         </div>
     </div>
+    {% include 'footer.html' %}
+    
+    
 
-    <!-- Footer with Payment Methods and Social Icons -->
-    <div class="footer">
-        <div class="payment-methods">
-            <img src="https://img.icons8.com/fluency/48/000000/visa.png" alt="Visa">
-            <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="MasterCard">
-            <img src="https://img.icons8.com/color/48/000000/maestro.png" alt="Maestro">
-            <img src="https://img.icons8.com/color/48/000000/amex.png" alt="American Express">
-        </div>
-        <div class="social-icons">
-            <a href="https://www.facebook.com" target="_blank">
-                <img src="https://img.icons8.com/fluency/48/000000/facebook-new.png" alt="Facebook">
-            </a>
-            <a href="https://www.linkedin.com" target="_blank">
-                <img src="https://img.icons8.com/fluency/48/000000/linkedin.png" alt="LinkedIn">
-            </a>
-            <a href="https://www.instagram.com" target="_blank">
-                <img src="https://img.icons8.com/fluency/48/000000/instagram-new.png" alt="Instagram">
-            </a>
-            <a href="https://www.twitter.com" target="_blank">
-                <img src="https://img.icons8.com/fluency/48/000000/twitter.png" alt="Twitter">
-            </a>
-        </div>
+   <!-- Bottom Navigation -->
+   <div class="bottom-nav" id="bottomNav">
+    <div class="nav-item">
+        <a href="{{ url_for('home') }}">
+            <div class="nav-icon nav-home">
+                <img src="https://img.icons8.com/ios-filled/50/000000/home.png" alt="Home Icon" />
+            </div>
+            <span>Home</span>
+        </a>
     </div>
+    <div class="nav-item">
+        <a href="{{ url_for('view_favorites') }}">
+            <div class="nav-icon nav-favorites">
+                <img src="https://img.icons8.com/ios-filled/50/000000/star--v1.png" alt="Favorites Icon" />
+            </div>
+            <span>Favorites</span>
+        </a>
+    </div>
+    <div class="nav-item">
+        <a href="{{ url_for('discounts') }}">
+            <div class="nav-icon nav-discounts">
+                <img src="https://img.icons8.com/ios-filled/50/000000/discount.png" alt="Discounts Icon" />
+            </div>
+            <span>Discounts</span>
+        </a>
+    </div>
+    <div class="nav-item">
+        <a href="{{ url_for('view_cart') }}">
+            <div class="nav-icon nav-cart">
+                <img src="https://img.icons8.com/ios-filled/50/000000/shopping-cart.png" alt="Cart Icon" />
+            </div>
+            <span>Cart ({{ cart_count }})</span>
+        </a>
+    </div>
+</div>
 
-    <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-        <div class="nav-item">
-            <a href="{{ url_for('home') }}">
-                <div class="nav-icon nav-home">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/home.png" alt="Home Icon" />
-                </div>
-                <span>Home</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a href="{{ url_for('view_favorites') }}">
-                <div class="nav-icon nav-favorites">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/star--v1.png" alt="Favorites Icon" />
-                </div>
-                <span>Favorites</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a href="{{ url_for('discounts') }}">
-                <div class="nav-icon nav-discounts">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/discount.png" alt="Discounts Icon" />
-                </div>
-                <span>Discounts</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a href="{{ url_for('view_cart') }}">
-                <div class="nav-icon nav-cart">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/shopping-cart.png" alt="Cart Icon" />
-                </div>
-                <span>Cart ({{ cart_count }})</span>
-            </a>
-        </div>
-    </div>
+<!-- Scroll Detection Script -->
+<script>
+    let lastScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+    window.addEventListener("scroll", function () {
+        const bottomNav = document.getElementById("bottomNav");
+        const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Show navbar when scrolling up, hide when scrolling down
+        if (currentScroll > lastScrollTop) {
+            bottomNav.style.transform = "translateY(100%)"; // Hide nav when scrolling down
+        } else {
+            bottomNav.style.transform = "translateY(0)"; // Show nav when scrolling up
+        }
+        lastScrollTop = currentScroll <= 0 ? 0 : currentScroll; // Update scroll position
+    });
+</script>
+
 </body>
+
 </html>

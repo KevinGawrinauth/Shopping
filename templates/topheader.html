@@ -92,6 +92,23 @@
             margin-right: 20px;
             font-weight: bold;
         }
+        .small-dropdown {
+            width: 150px;
+        }
+        .location-dropdown {
+            position: absolute; /* Allows precise positioning */
+            top: 28px; /* Adjust this to align vertically */
+            left: 1200px; /* Adjust this based on the position of the search bar */
+            width: 175px; /* Set the width to fit within available space */
+            z-index: 1000; /* Ensures it stays above other elements */
+        }
+        
+        .form-select-sm {
+            font-size: 12px; /* Adjusts text size */
+            padding: 4px; /* Reduces padding for a smaller dropdown */
+        }
+    
+        
     </style>
 </head>
 
@@ -131,13 +148,49 @@
                 </button>
             </div>
         </div>
+      <!-- Location Dropdown positioned in top-right corner -->
+      <div class="location-dropdown">
+        <select id="locationDropdown" class="form-select form-select-sm" onchange="changeLocation()">
+            <option value="">Select Location</option>
+            {% for location in locations %}
+                <option value="{{ location['locationId'] }}" {% if location['locationId'] == selected_location %}selected{% endif %}>
+                    {{ location['name'] }} - {{ location['address']['city'] }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
 
-        <!-- Username and Accessibility Button -->
+<script>
+    function changeLocation() {
+        const locationDropdown = document.getElementById("locationDropdown");
+        const locationId = locationDropdown.value;
+
+        if (locationId) {
+            // Redirect to set the location in the backend and update the JSON file
+            window.location.href = `/set_location?location_id=${locationId}`;
+        }
+    }
+
+    // When the page loads, set the dropdown to the stored location from the server
+    document.addEventListener("DOMContentLoaded", function() {
+        const locationDropdown = document.getElementById("locationDropdown");
+        const savedLocationId = "{{ selected_location }}";  // Server-passed selected location
+
+        if (savedLocationId) {
+            locationDropdown.value = savedLocationId;
+        }
+    });
+</script>
+
+
+      <!-- Username and Accessibility Button -->
         <div class="d-flex align-items-center">
             <div class="nav-item dropdown">
                 <a class="dropdown-toggle username" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-                    Kevin
+                    {{ username }}
                 </a>
+                    
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
                     <li><a class="dropdown-item" href="{{ url_for('settings') }}">Settings</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('account_info') }}">Account Information</a></li>

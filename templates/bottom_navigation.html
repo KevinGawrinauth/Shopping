@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- Bottom Navigation -->
-<div class="bottom-nav">
+<div class="bottom-nav" id="bottomNav">
     <div class="nav-item">
         <a href="{{ url_for('home') }}">
             <div class="nav-icon nav-home">
@@ -38,61 +38,85 @@
 
 <style>
     .bottom-nav {
-        position: fixed; /* Fixes the navbar at the bottom of the viewport */
+        position: fixed;
         bottom: 0;
-        width: 100%; /* Ensures it spans the full width of the screen */
-        background-color: #f8f9fa; /* Sets a light gray background color */
-        box-shadow: 0 -1px 10px rgba(0, 0, 0, 0.1); /* Adds a subtle shadow effect above the navbar */
-        display: flex; /* Uses Flexbox for layout */
-        justify-content: space-around; /* Arranges the items evenly */
-        padding: 10px 0; /* Adds vertical padding for spacing */
-        z-index: 1000; /* Ensures the navbar stays on top of other elements */
+        width: 100%;
+        background-color: #f8f9fa;
+        box-shadow: 0 -1px 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-around;
+        padding: 10px 0;
+        z-index: 1000;
+        transition: transform 0.3s ease;
+    }
+    body {
+        padding-bottom: 125px;
     }
     .nav-item {
-        flex-grow: 1; /* Makes each item take an equal amount of space */
-        text-align: center; /* Centers the text inside the item */
+        flex-grow: 1;
+        text-align: center;
     }
     .nav-item a {
-        text-decoration: none; /* Removes the default underline from links */
-        color: #000; /* Sets the text color to black */
-        font-weight: bold; /* Makes the text bold */
-        display: flex; /* Uses Flexbox for layout */
-        flex-direction: column; /* Arranges icon and text vertically */
-        align-items: center; /* Centers the icon and text */
-        width: auto; /* Allows the width to adjust based on content */
-        padding: 5px 0; /* Reduces vertical padding to decrease button size */
-        margin: 0 100px; /* Adds horizontal margin for spacing between buttons */
-        box-sizing: border-box; /* Ensures padding is included in the width */
+        text-decoration: none;
+        color: #000;
+        font-weight: bold;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: auto;
+        padding: 5px 0;
+        margin: 0 100px;
+        box-sizing: border-box;
     }
-    /* Ensure visited links remain black */
     .nav-item a:visited {
-        color: #000; /* Keeps visited links black */
+        color: #000;
     }
     .nav-icon {
-        width: 50px; /* Sets the width of the icon container */
-        height: 50px; /* Sets the height of the icon container */
-        border-radius: 10px; /* Gives rounded corners to the icon area */
-        display: flex; /* Uses Flexbox for layout */
-        justify-content: center; /* Centers the icon horizontally */
-        align-items: center; /* Centers the icon vertically */
-        margin-bottom: 5px; /* Adds space between the icon and text */
-        background-color: #f8f9fa; /* Sets a light gray background for the icon area */
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 5px;
+        background-color: #f8f9fa;
     }
     .nav-item img {
-        width: 30px; /* Sets the width of the icons */
-        height: 30px; /* Sets the height of the icons */
+        width: 30px;
+        height: 30px;
     }
     .nav-item span {
-        font-size: 14px; /* Sets the font size for the navigation labels */
+        font-size: 14px;
     }
-    /* Hover effect: green background, white icon */
     .nav-item a:hover .nav-icon {
-        background-color: #28a745; /* Changes the background color to green on hover */
+        background-color: #28a745;
     }
     .nav-item a:hover img {
-        filter: brightness(0) invert(1); /* Makes the icon white on hover */
+        filter: brightness(0) invert(1);
     }
     .nav-item a:hover {
-        color: #000; /* Keeps the text color black when hovered */
+        color: #000;
+    }
+
+    /* Initial state is visible */
+    .bottom-nav {
+        transform: translateY(0);
     }
 </style>
+
+<script>
+    let lastScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+    window.addEventListener("scroll", function () {
+        const bottomNav = document.getElementById("bottomNav");
+        const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Show navbar when scrolling up, hide when scrolling down
+        if (currentScroll > lastScrollTop) {
+            bottomNav.style.transform = "translateY(100%)"; // Hide nav when scrolling down
+        } else {
+            bottomNav.style.transform = "translateY(0)"; // Show nav when scrolling up
+        }
+        lastScrollTop = currentScroll <= 0 ? 0 : currentScroll; // Update scroll position
+    });
+</script>
