@@ -11,16 +11,13 @@
     <style>
         /* Apply Quicksand font to the entire page */
         body {
-            font-family: Arial, sans-serif;
-            background-image: url('/static/img/veggie_background.png'); /* Replace white background with an image */
+            font-family: 'Quicksand', sans-serif;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)), url('/static/img/veggie_background2.0.jpg');
             background-size: cover; /* Fills the viewport while keeping the image's aspect ratio */
             background-repeat: no-repeat;
             background-position: center;
             background-attachment: fixed; /* Keeps the background fixed during scrolling */
             color: #333;
-        }
-        {
-            font-family: 'Quicksand', sans-serif;
         }
         .product-item {
             width: 100%;
@@ -111,7 +108,7 @@
     {% include 'topheader.html' %}
 
     <div class="container">
-        <h1>{{ category }} Products</h1>
+        <h1 class="text-center mb-4">{{ category }} Products</h1>
         
         <div class="row">
             {% for product in products %}
@@ -131,7 +128,7 @@
                                         <span class="old-price">${{ product['items'][0]['price']['old'] }}</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="price">Not Available</span>
+                                    <span>Not Available</span>
                                 {% endif %}
                             </p>
                             
@@ -139,16 +136,17 @@
 
                             <!-- Spacer div to push the button to the bottom -->
                             <div class="flex-spacer"></div>
-                            
-                            <form action="{{ url_for('add_to_cart', product_id=product['id']) }}" method="POST">
+                            <form action="{{ url_for('add_to_cart') }}" method="POST">
                                 <input type="hidden" name="product_name" value="{{ product['description'] }}">
-                                <input type="hidden" name="product_price" value="{{ product['items'][0]['price']['regular'] if product['items'][0]['price'] else 'N/A' }}">
-                                <input type="hidden" name="product_image" value="{{ product['images'][0]['sizes'][0]['url'] if product['images'] else '' }}">
+                                <input type="hidden" name="product_price" value="{{ product['items'][0]['price']['regular'] if product['items'] and product['items'][0].get('price') else '0.00' }}">
+                                <input type="hidden" name="product_image" value="{{ product['images'][0]['sizes'][0]['url'] if product.get('images') else '/static/img/default_image.png' }}">
+                                <input type="hidden" name="category" value="{{ category }}">
                                 <button type="submit" class="btn-add-cart">Add to Cart</button>
                             </form>
+                            
 
                             <!-- Favorite Button -->
-                            <button onclick="toggleFavorite('{{ product['id'] }}', '{{ product['description'] }}', '{{ product['items'][0]['price']['regular'] if product['items'][0].get('price') else 'N/A' }}', '{{ product['images'][0]['sizes'][0]['url'] if product['images'] else '' }}')" class="favorite-btn">
+                            <button onclick="toggleFavorite(this, '{{ product['id'] }}', '{{ product['description'] }}', '{{ product['items'][0]['price']['regular'] if product['items'][0].get('price') else 'N/A' }}', '{{ product['images'][0]['sizes'][0]['url'] if product['images'] else '' }}')" class="favorite-btn">
                                 <i id="favorite-icon-{{ product['id'] }}" class="{% if product['id'] in favorite_ids %}fas{% else %}far{% endif %} fa-star"></i>
                             </button>
                         </div>
@@ -156,28 +154,89 @@
                 </div>
             {% endfor %}
         </div>
+        {% set page = page if page is defined else 1 %}
+
+        <div class="pagination-controls text-center my-4">
+            <!-- 'Previous' button (disabled if on the first page) -->
+            <a href="{{ url_for('get_products', category=category, query=query, page=page-1) }}"
+               class="btn btn-success mx-1 {% if page <= 1 %}disabled{% endif %}">Previous</a>
+        
+            <!-- Page numbers (limit to first 50 pages for now) -->
+            {% for p in range(1, 51) %}
+                {% if p == page %}
+                    <span class="btn btn-primary mx-1">{{ p }}</span>
+                {% else %}
+                    <a href="{{ url_for('get_products', category=category, query=query, page=p) }}"
+                       class="btn btn-outline-primary mx-1">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+        
+            <!-- 'Next' button (disabled if there's no next page) -->
+            <a href="{{ url_for('get_products', category=category, query=query, page=page+1) }}"
+               class="btn btn-success mx-1 {% if not has_next_page %}disabled{% endif %}">Next</a>
+        </div>
+        
+        
+        
+
+        
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        function toggleFavorite(id, name, price, imageUrl) {
-            const icon = document.getElementById("favorite-icon-" + id);
-            icon.classList.toggle("fas");
-            icon.classList.toggle("far");
+        function toggleFavorite(buttonElement, id, name, price, imageUrl) {
+            const icon = buttonElement.querySelector('i'); // Get the icon within the clicked button
+            const isFavorited = icon.classList.contains("fas"); // Check if it is already favorited
 
+            // Toggle the star icon state
+            icon.classList.toggle("fas", !isFavorited); // Fill the star if it was not favorited
+            icon.classList.toggle("far", isFavorited);  // Unfill the star if it was already favorited
+
+            // Send the favorite status to the server
             fetch('/toggle_favorite', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, name, price, image_url: imageUrl })
             })
             .then(response => response.json())
-            .then(data => console.log(data.message))
+            .then(data => {
+                console.log(data.message); // Optional: Display success message
+            })
             .catch(error => console.error('Error:', error));
         }
-    </script>
 
-   
+        function loadFavorites() {
+            fetch('/get_favorites')
+                .then(response => response.json())
+                .then(favorites => {
+                    const favoritesList = document.getElementById("favorites-list");
+                    favoritesList.innerHTML = '';  // Clear existing items
+
+                    if (favorites.length === 0) {
+                        favoritesList.innerHTML = "<p>No favorite items found.</p>";
+                    } else {
+                        favorites.forEach(item => {
+                            favoritesList.innerHTML += `
+                                <div class="col-md-4 favorite-item">
+                                    <div class="card">
+                                        <img src="${item.image_url}" alt="${item.name}" class="card-img-top">
+                                        <div class="card-body">
+                                            <h5 class="card-title">${item.name}</h5>
+                                            <p class="card-text">Price: $${item.price}</p>
+                                            <button onclick="toggleFavorite('${item.id}', '${item.name}', '${item.price}', '${item.image_url}')" class="btn favorite-btn">Remove from Favorites</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading favorites:', error));
+        }
+
+        document.addEventListener("DOMContentLoaded", loadFavorites);
+    </script>
 </body>
 {% include 'bottom_navigation.html' %}
 </html>

@@ -8,7 +8,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-image: url('/static/img/veggie_background2.0.jpg');
+            background-image: url('/static/img/veggie_background2.0.jpg'); /* Replace white background with an image */
             background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
@@ -103,39 +103,50 @@
         }
     </style>
 </head>
+{% include 'topheader.html' %}
 <body>
-    {% include 'topheader.html' %}
     <div class="container">
         <div class="cart-container">
-            <!-- Cart Items Section -->
+            <!-- Cart Items -->
             <div class="cart-items">
                 <h2>My Cart</h2>
-                {% if session.cart %}
-                    {% for item in session.cart %}
+                {% if cart %}
+                    {% for item in cart %}
                         <div class="cart-item">
                             <img src="{{ item['image'] }}" alt="{{ item['name'] }}">
+
                             <div class="d-flex flex-column w-100">
                                 <div>
                                     <h5>{{ item['name'] }}</h5>
                                     <p>Price: ${{ '%.2f' | format(item['price']) }}</p>
                                 </div>
+
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="quantity-controls">
-                                        <form action="{{ url_for('update_quantity', index=loop.index0, operation='decrease') }}" method="POST">
+                                        <!-- Decrease Quantity Button -->
+                                        <form action="{{ url_for('update_quantity', index=loop.index0, operation='decrease') }}" method="POST" style="display: inline;">
                                             <button type="submit" class="btn-quantity" {% if item['quantity'] <= 1 %}disabled{% endif %}>-</button>
                                         </form>
+                                
+                                        <!-- Display Current Quantity -->
                                         <span>{{ item['quantity'] }}</span>
-                                        <form action="{{ url_for('update_quantity', index=loop.index0, operation='increase') }}" method="POST">
+                                
+                                        <!-- Increase Quantity Button -->
+                                        <form action="{{ url_for('update_quantity', index=loop.index0, operation='increase') }}" method="POST" style="display: inline;">
                                             <button type="submit" class="btn-quantity">+</button>
                                         </form>
                                         <form action="{{ url_for('remove_item', index=loop.index0) }}" method="POST">
                                             <button type="submit" class="remove-item-btn" title="Remove item">
                                                 <img src="/static/img/trash-can-delete-icon.png" alt="Remove item">
                                             </button>
-                                        </form>
+                                        </form>                                        
+                                        
                                     </div>
+
                                     <p class="total-price">Total: ${{ '%.2f' | format(item['price'] * item['quantity']) }}</p>
                                 </div>
+
+                                <!-- Save for Later Button -->
                                 <form action="{{ url_for('save_for_later', index=loop.index0) }}" method="POST">
                                     <button type="submit" class="btn-save-later">Save for Later</button>
                                 </form>
@@ -145,7 +156,6 @@
                 {% else %}
                     <p>Your cart is empty.</p>
                 {% endif %}
-                <a href="{{ url_for('home') }}" class="btn btn-primary mt-3">Continue Shopping</a>
             </div>
 
             <!-- Summary Section -->
@@ -181,6 +191,7 @@
                             <h6>{{ item['name'] }}</h6>
                             <p>Price: ${{ item['price'] }}</p>
                         </div>
+                        <!-- Move to Cart Button -->
                         <form action="{{ url_for('move_to_cart', index=loop.index0) }}" method="POST">
                             <button type="submit" class="btn-move-to-cart">Move to Cart</button>
                         </form>
@@ -192,7 +203,8 @@
         </div>
     </div>
 
-    {% include 'bottom_navigation.html' %}
+    <!-- Include Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    {% include 'bottom_navigation.html' %}
 </body>
 </html>
