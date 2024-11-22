@@ -4,69 +4,122 @@
         "name": "Danny",
         "email": "Potato@gmail.com",
         "phone": "",
-        "address": ""
+        "address": "",
+        "order_history": []
     },
     "kevin": {
         "password": "apple",
         "name": "Kevin",
         "email": "kevingawrinauth@yahoo.com",
         "phone": "9174809274",
-        "address": ""
+        "address": "",
+        "order_history": []
     },
     "elijah": {
         "password": "elijah",
         "name": "Elijah Wood",
         "email": "elijah.wood@example.com",
         "phone": "555-0103",
-        "address": "789 Pine St, Springfield, USA"
+        "address": "789 Pine St, Springfield, USA",
+        "order_history": []
     },
     "gayathri": {
         "password": "gayathri",
         "name": "Gayathri",
         "email": "gayathri@gmail.com",
         "phone": "",
-        "address": ""
+        "address": "",
+        "order_history": []
     },
     "alex": {
         "password": "alex",
         "name": "Alex",
         "email": "alex@gmail.com",
         "phone": "",
-        "address": ""
+        "address": "",
+        "order_history": []
     },
     "scottyj": {
         "password": "scottyj",
         "name": "",
         "email": "",
         "phone": "",
-        "address": ""
+        "address": "",
+        "order_history": []
     },
     "eric": {
         "password": "eric",
         "name": "",
         "email": "",
         "phone": "",
-        "address": ""
+        "address": "",
+        "order_history": []
     },
     "kevin1": {
         "password": "Kg10316121!",
         "name": "",
         "email": "",
         "phone": "",
-        "address": ""
+        "address": "",
+        "order_history": []
     },
     "kgawrinauth1@pride.hofstra.edu": {
         "password": null,
         "name": "Kevin Gawrinauth",
         "email": "kgawrinauth1@pride.hofstra.edu",
         "phone": "",
-        "address": ""
+        "address": "",
+        "order_history": []
     },
     "kevingawrinauth@yahoo.com": {
         "password": null,
         "name": "Kevin Gawrinauth",
         "email": "kevingawrinauth@yahoo.com",
         "phone": "",
-        "address": ""
+        "address": "",
+        "order_history": [
+            {
+                "date": "2024-11-22 13:12:50",
+                "order_items": [
+                    {
+                        "name": "Fresh Cut Mild Fajita Vegetable Mix",
+                        "price": 5.0,
+                        "image": "https://www.kroger.com/product/images/xlarge/front/0063912388039",
+                        "quantity": 2
+                    }
+                ],
+                "total_price": 10.0,
+                "shipping_details": {
+                    "name": "k",
+                    "address": "k",
+                    "city": "k",
+                    "zip": "k"
+                }
+            },
+            {
+                "date": "2024-11-22 14:18:11",
+                "order_items": [
+                    {
+                        "name": "Fresh Blueberries",
+                        "price": 4.99,
+                        "image": "https://www.kroger.com/product/images/xlarge/front/0003338322101",
+                        "quantity": 3
+                    },
+                    {
+                        "name": "Kroger\u00ae Deluxe Rocky Road Ice Cream Tub",
+                        "price": 2.99,
+                        "image": "https://www.kroger.com/product/images/xlarge/front/0001111050725",
+                        "quantity": 1
+                    }
+                ],
+                "total_price": 17.96,
+                "shipping_details": {
+                    "name": "k",
+                    "address": "k",
+                    "city": "k",
+                    "zip": "k"
+                }
+            }
+        ]
     }
 }

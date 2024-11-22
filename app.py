@@ -88,7 +88,6 @@ USER_FILE = 'user_storage.json'
 client_id = 'kevingawrinauth-b1629c2310698a009e85d726fbc0e9aa8264849196508842534'
 client_secret = 'fpfEnrPkQnQcWGySAoig8G6Up1ZosRbV8u0LrKSd'
 
-app.secret_key = b'\xef\xd4\x16\x98h\xc6\xdd\xc3\xc6\xce\x02\xd6@o\x8a|\x08\x1c\xd6\\X{\xeex'
 def load_user_storage():
     try:
         # Load and return the user data from user_Storage.json
@@ -173,31 +172,36 @@ def fetch_locations():
 app.config['WTF_CSRF_ENABLED'] = False
 # implemented a helper functions to manage user data in a file
 def read_users(source='regular'):
-    if source and not os.path.exists(USER_FILE):
-        file_path = 'google_accounts.json'
-    else:
-        file_path = 'user_storage.json'
-    with open(file_path, 'r') as file:
-        return json.load(file)
+    file_path = 'google_accounts.json' if source == 'google' else USER_FILE
+    if not os.path.exists(file_path):
+        return {}
+    try:
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    except json.JSONDecodeError:
+        print(f"Error: {file_path} contains invalid JSON.")
+        return {}
+
 def read_user(username):
     users = read_users()
     return users.get(username)
 
-def write_users(users,source='regular'):
-    file_path = 'google_accounts.json' if source == 'google' else 'user_storage.json'
+def write_users(users, source='regular'):
+    file_path = 'google_accounts.json' if source == 'google' else USER_FILE
     if os.path.exists(file_path):
-        with open(file_path, 'r') as file:
-            try:
-                existing_users = json.load(file)  # Load existing data
-            except json.JSONDecodeError:
-                existing_users = {}  
+        try:
+            with open(file_path, 'r') as file:
+                existing_users = json.load(file)
+        except json.JSONDecodeError:
+            existing_users = {}  # Start fresh if JSON is invalid
     else:
-        existing_users = {} 
-    
+        existing_users = {}
+
     existing_users.update(users)
 
     with open(file_path, 'w') as file:
         json.dump(existing_users, file, indent=4)
+
 
 # User class for Flask-Login
 class User(UserMixin):
@@ -248,30 +252,17 @@ def update_user():
     return redirect(url_for('settings'))
 
 
-@app.route('/orderhistory')
+@app.route('/order_history')
 @login_required
-def orderhistory():
-    # Sample order data with renamed attribute to avoid conflict
-    order_history = [
-        {
-            "date": "2024-10-12",
-            "order_items": [
-                {"name": "Sample Item 1", "price": 5.00},
-                {"name": "Sample Item 2", "price": 7.50}
-            ],
-            "total_price": 12.50
-        },
-        {
-            "date": "2024-10-13",
-            "order_items": [
-                {"name": "Sample Item 3", "price": 3.00},
-                {"name": "Sample Item 4", "price": 6.50}
-            ],
-            "total_price": 9.50
-        }
-    ]
+def order_history():
+    user_id = session.get("user_id")
+    user_data = read_user(user_id)
+
+    # Fetch order history or initialize an empty list if not found
+    order_history = user_data.get("order_history", []) if isinstance(user_data, dict) else []
 
     return render_template('orderhistory.html', order_history=order_history)
+
 
 
 @app.route('/settings')
@@ -528,7 +519,6 @@ import json
 
 CART_FILE = 'cart.json'  # File to store cart data
 
-# Helper function to read the cart from the file
 def read_cart(user_id):
     """Read cart and saved items for a specific user."""
     if os.path.exists(CART_FILE):
@@ -545,7 +535,6 @@ def read_cart(user_id):
     # Return empty structure if file doesn't exist or user has no cart
     return {'cart_items': [], 'saved_items': []}
 
-# Helper function to write the cart to the file
 def write_cart(user_id, cart):
     """Write cart and saved items for a specific user."""
     data = {}
@@ -943,14 +932,14 @@ def discounts(category=None):
 
 
 
-@app.route('/checkout')
+@app.route('/checkout', methods=['POST', 'GET'])
 @login_required
 def checkout():
     user_id = session.get("user_id")
 
     # Retrieve the cart directly from cart.json using user_id
-    user_data = read_cart(user_id)
-    cart_items = user_data.get("cart_items", []) if isinstance(user_data, dict) else []
+    user_cart = read_cart(user_id)
+    cart_items = user_cart.get("cart_items", []) if isinstance(user_cart, dict) else []
 
     # Calculate subtotal and other amounts
     try:
@@ -962,7 +951,33 @@ def checkout():
 
     sales_tax_rate = 0.08625
     sales_tax = subtotal * sales_tax_rate
-    total_cost = subtotal + sales_tax
+    total_cost = round(subtotal + sales_tax, 2)
+
+    if request.method == 'POST':
+        # Save order details in user_storage.json
+        user_data = read_user(user_id)
+        if user_data:
+            # Create a new order entry
+            from datetime import datetime
+            new_order = {
+                "date": datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
+                "order_items": cart_items,  # cart_items already contain imageUrl, name, price, quantity
+                "total_price": round(total_cost, 2)
+            }
+
+            # Add to order_history
+            if "order_history" not in user_data:
+                user_data["order_history"] = []
+            user_data["order_history"].append(new_order)
+
+            # Save updated user data
+            write_user(user_id, user_data)
+
+        # Clear the cart for the user in cart.json
+        write_cart(user_id, {"cart_items": [], "saved_items": []})
+
+        flash("Order placed successfully!", "success")
+        return redirect(url_for('order_history'))
 
     return render_template(
         'checkout.html',
@@ -971,6 +986,21 @@ def checkout():
         sales_tax=sales_tax,
         total_cost=total_cost,
     )
+
+@app.route('/api/order_history')
+def api_order_history():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    with open('user_Storage.json', 'r') as f:
+        users = json.load(f)
+    
+    user_data = users.get(user_id, {})
+    order_history = user_data.get('order_history', [])
+    
+    return jsonify(order_history)
+
 
 def send_order_confirmation_email(recipient_email, name, address, city, zip_code):
     # Set up SendGrid API URL and headers
@@ -1007,7 +1037,6 @@ def send_order_confirmation_email(recipient_email, name, address, city, zip_code
     else:
         print("Failed to send email. Status Code:", response.status_code)
         print("Response:", response.json())
-
 @app.route('/process_checkout', methods=['POST'])
 @login_required
 def process_checkout():
@@ -1028,18 +1057,51 @@ def process_checkout():
 
     print(f"User email for order confirmation: {to_email}")
 
-    # Send confirmation email if email is present
-    if to_email:
-        send_order_confirmation_email(to_email, name, address, city, zip_code)
+    # Load the cart data
+    cart_data = read_cart(user_id)
+    cart_items = cart_data.get('cart_items', [])
+
+    # If the cart is empty, redirect back to the cart page
+    if not cart_items:
+        flash("Your cart is empty. Please add items before checking out.", "warning")
+        return redirect(url_for('cart'))
+
+    # Prepare the order object
+    from datetime import datetime
+    order = {
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "order_items": cart_items,
+        "total_price": sum(item['price'] * item['quantity'] for item in cart_items),
+        "shipping_details": {
+            "name": name,
+            "address": address,
+            "city": city,
+            "zip": zip_code
+        }
+    }
+
+    # Update the user's order history in user_storage.json
+    users = load_user_storage()
+    if user_id in users:
+        user_data = users[user_id]
+        if "order_history" not in user_data:
+            user_data["order_history"] = []
+        user_data["order_history"].append(order)
+
+        # Save back to user_storage.json using the correct function
+        write_users(users)
 
     # Clear the cart in `cart.json`
-    cart_data = read_cart(user_id)
     cart_data['cart_items'] = []  # Empty the user's cart
     write_cart(user_id, cart_data)  # Save changes back to the file
 
     # Clear session cart count
     session['cart_count'] = 0
     session.modified = True
+
+    # Send confirmation email if email is present
+    if to_email:
+        send_order_confirmation_email(to_email, name, address, city, zip_code)
 
     flash("Thank you for your order! A confirmation email has been sent.", "success")
     return redirect(url_for('home'))
@@ -1231,6 +1293,12 @@ def google_auth():
         return redirect(url_for('login'))
 
     
+    app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax'
+)
+
 @app.route('/saved_items')
 @login_required
 def view_saved_items():
