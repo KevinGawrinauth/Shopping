@@ -281,7 +281,7 @@ def settings():
     user_data = users.get(current_user.id, {})
     return render_template('settings.html', user_data=user_data)
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'], endpoint='login')
 def login():
     form = LoginForm()  # Use LoginForm for the login form
     if form.validate_on_submit():
@@ -296,17 +296,19 @@ def login():
 
         # Check user credentials
         if username in users and users[username]['password'] == password:
-            user = User(username)
+            user = User(username)  # Create a user object
             login_user(user)  # Log in the user
 
-            # Store only essential data in the session
-            session['user_id'] = username
-            session['cart_count'] = sum(item.get('quantity', 1) for item in read_cart(username))  # Calculate and store only the count
-            session.modified = True  # Ensure session updates are saved
+            # Load the user's cart and calculate the cart count
+            cart_data = read_cart(username)
+            session['user_id'] = username  # Store user ID in session
+            session['cart_count'] = sum(item.get('quantity', 1) for item in cart_data['cart_items'])  # Calculate total quantity
+            session.modified = True  # Ensure session is saved
 
-            return redirect(url_for('home'))
+            flash('Login successful!', 'success')
+            return redirect(url_for('home'))  # Redirect to home or desired page
         else:
-            flash('Invalid username or password')
+            flash('Invalid username or password', 'danger')
 
     return render_template('login.html', form=form)
 
@@ -521,32 +523,42 @@ import json
 import os
 
 CART_FILE = "cart.json"
+import os
+import json
+
+CART_FILE = 'cart.json'  # File to store cart data
 
 # Helper function to read the cart from the file
 def read_cart(user_id):
+    """Read cart and saved items for a specific user."""
+    if os.path.exists(CART_FILE):
+        with open(CART_FILE, 'r') as file:
+            try:
+                data = json.load(file)  # Load all cart data
+                user_cart = data.get(user_id, {})  # Get cart for specific user
+                return {
+                    'cart_items': user_cart.get('cart_items', []),  # Ensure cart_items is a list
+                    'saved_items': user_cart.get('saved_items', [])  # Ensure saved_items is a list
+                }
+            except json.JSONDecodeError:
+                print("Error decoding JSON from cart file.")
+    # Return empty structure if file doesn't exist or user has no cart
+    return {'cart_items': [], 'saved_items': []}
+
+# Helper function to write the cart to the file
+def write_cart(user_id, cart):
+    """Write cart and saved items for a specific user."""
+    data = {}
+    # Load existing cart data if the file exists
     if os.path.exists(CART_FILE):
         with open(CART_FILE, 'r') as file:
             try:
                 data = json.load(file)
-                user_cart = data.get(user_id, {})
-                # Ensure the cart_items key is a list
-                return {
-                    'cart_items': user_cart.get('cart_items', []),
-                    'saved_items': user_cart.get('saved_items', [])
-                }
             except json.JSONDecodeError:
-                print("Error decoding JSON from cart file.")
-    return {'cart_items': [], 'saved_items': []}  # Default to empty cart structure
-
-# Helper function to write the cart to the file
-def write_cart(user_id, cart):
-    data = {}
-    if os.path.exists(CART_FILE):
-        with open(CART_FILE, 'r') as file:
-            data = json.load(file)
-    
-    data[user_id] = cart  # Update the user's cart data
-    
+                print("Error decoding JSON. Overwriting file.")
+    # Update the user's cart
+    data[user_id] = cart
+    # Save the updated data back to the file
     with open(CART_FILE, 'w') as file:
         json.dump(data, file, indent=4)
 
@@ -760,63 +772,6 @@ def logout():
     
     return redirect(url_for('login'))
 
-@app.route('/discounts', defaults={'category': None})
-@app.route('/discounts/<category>')
-@login_required
-def discounts(category):
-    try:
-        access_token = get_kroger_token(client_id, client_secret)
-    except Exception as e:
-        flash("Error fetching access token.", "danger")
-        return redirect(url_for('home'))
-
-    search_url = "https://api.kroger.com/v1/products"
-    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
-
-    # Fetch selected location from locations.json
-    location_id = read_selected_location()
-    if not location_id:
-        flash("No store location selected. Please select a location first.", "warning")
-        return redirect(url_for('home'))
-
-    # Set filter parameters
-    params = {
-        'filter.locationId': location_id,  # Include locationId in the query
-        'filter.limit': 50,
-        'filter.start': 0
-    }
-
-    if category:
-        params['filter.term'] = category.lower()  # Add category filter if provided
-
-    response = requests.get(search_url, headers=headers, params=params)
-
-    if response.status_code == 200:
-        products = []
-        kroger_data = response.json().get('data')
-
-        for product in kroger_data:
-            item = product['items'][0] if product.get('items') else {}
-            price = item.get('price', {})
-            promo_price = price.get('promo', 'N/A')
-            regular_price = price.get('regular', 'N/A')
-
-            product_info = {
-                'name': product.get('description', 'No description'),
-                'price': promo_price,
-                'original_price': regular_price,
-                'imageUrl': product['images'][0]['sizes'][0]['url'] if product.get('images') else '/static/img/default_product.png'
-            }
-            products.append(product_info)
-
-        # Render a different template for category-specific discounts
-        if category:
-            return render_template('discounts_category.html', category=category.capitalize(), products=products)
-        else:
-            return render_template('discounts.html', products=products)
-    else:
-        flash("Error fetching discounted products.", "danger")
-        return redirect(url_for('home'))
 
 
 
@@ -893,6 +848,71 @@ def get_products(category):
 def cart_counter():
     cart_count = session.get('cart_count', 0)
     return {'cart_count': cart_count}
+
+@app.route('/discounts', methods=['GET'])
+@app.route('/discounts/<category>', methods=['GET'])
+@login_required
+def discounts(category=None):
+    """
+    Render discounts.html for general discounts or discounts_category.html for specific categories.
+    """
+    try:
+        access_token = get_kroger_token(client_id, client_secret)
+    except Exception as e:
+        flash("Error fetching access token.", "danger")
+        return redirect(url_for('home'))
+
+    search_url = "https://api.kroger.com/v1/products"
+    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
+
+    # Fetch the selected store location
+    location_id = read_selected_location()
+    if not location_id:
+        flash("No store location selected. Please select a location first.", "warning")
+        return redirect(url_for('home'))
+
+    # Set API filter parameters
+    params = {
+        'filter.locationId': location_id,
+        'filter.limit': 50,
+        'filter.start': 0
+    }
+
+    # Add category filter if specified
+    if category:
+        params['filter.term'] = category.lower()
+
+    # Fetch discounted products
+    response = requests.get(search_url, headers=headers, params=params)
+
+    if response.status_code == 200:
+        products = []
+        kroger_data = response.json().get('data', [])
+
+        for product in kroger_data:
+            item = product['items'][0] if product.get('items') else {}
+            price = item.get('price', {})
+            promo_price = price.get('promo', 'N/A')
+            regular_price = price.get('regular', 'N/A')
+
+            product_info = {
+                'name': product.get('description', 'No description'),
+                'price': promo_price,
+                'original_price': regular_price,
+                'imageUrl': product['images'][0]['sizes'][0]['url'] if product.get('images') else '/static/img/default_product.png'
+            }
+            products.append(product_info)
+
+        # Render discounts.html for general view, or discounts_category.html for specific category
+        if category:
+            return render_template('discounts_category.html', category=category.capitalize(), products=products)
+        else:
+            return render_template('discounts.html', products=products)
+    else:
+        flash("Error fetching discounted products. Please try again.", "danger")
+        return redirect(url_for('home'))
+
+
 
 @app.route('/checkout')
 @login_required
@@ -1068,8 +1088,6 @@ def inject_locations():
 @app.route('/faq')
 def faq():
     return render_template('faq.html')
-
-
 
 @app.route('/translate', methods=['POST'])
 def translate_text():

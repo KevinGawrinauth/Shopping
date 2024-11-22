@@ -1,21 +1,7 @@
 {
     "kevin": {
-        "cart_items": [
-            {
-                "name": "Sample Item 1",
-                "price": 5.99,
-                "image": "https://example.com/item1.jpg",
-                "quantity": 2
-            }
-        ],
-        "saved_items": [
-            {
-                "name": "Sample Item 2",
-                "price": 10.99,
-                "image": "https://example.com/item2.jpg",
-                "quantity": 1
-            }
-        ]
+        "cart_items": [],
+        "saved_items": []
     },
     "danny": {
         "cart_items": [],

@@ -57,29 +57,30 @@
 <body>
     {% include 'topheader.html' %}
 
-    <div class="category-container">
-        <a href="{{ url_for('category_discounts', category='Vegetables') }}" class="category-card">
-            <img src="/static/img/vegetables.png" alt="Vegetables">
-            <h4>Vegetables</h4>
-        </a>
-        <a href="{{ url_for('category_discounts', category='Meats') }}" class="category-card">
-            <img src="/static/img/meats.png" alt="Meats">
-            <h4>Meats</h4>
-        </a>
-        <a href="{{ url_for('category_discounts', category='Fruits') }}" class="category-card">
-            <img src="/static/img/fruits.png" alt="Fruits">
-            <h4>Fruits</h4>
-        </a>
-        <a href="{{ url_for('category_discounts', category='Drinks') }}" class="category-card">
-            <img src="/static/img/drinks.png" alt="Drinks">
-            <h4>Drinks</h4>
-        </a>
-        <a href="{{ url_for('category_discounts', category='Frozen') }}" class="category-card">
-            <img src="/static/img/frozen.png" alt="Frozen">
-            <h4>Frozen</h4>
-        </a>
-    </div>
-    
+    <div class="container mt-5">
+        <h2 class="text-center">Discounted Categories</h2>
+        <div class="category-container">
+            <a href="{{ url_for('discounts', category='Vegetables') }}" class="category-card">
+                <img src="/static/img/vegetables.png" alt="Vegetables">
+                <h4>Vegetables</h4>
+            </a>            
+            <a href="{{ url_for('discounts', category='Meats') }}" class="category-card">
+                <img src="/static/img/meats.png" alt="Meats">
+                <h4>Meats</h4>
+            </a>
+            <a href="{{ url_for('discounts', category='Fruits') }}" class="category-card">
+                <img src="/static/img/fruits.png" alt="Fruits">
+                <h4>Fruits</h4>
+            </a>
+            <a href="{{ url_for('discounts', category='Drinks') }}" class="category-card">
+                <img src="/static/img/drinks.png" alt="Drinks">
+                <h4>Drinks</h4>
+            </a>
+            <a href="{{ url_for('discounts', category='Frozen') }}" class="category-card">
+                <img src="/static/img/frozen.png" alt="Frozen">
+                <h4>Frozen</h4>
+            </a>
+        </div>
         <div class="category-container">
             <a href="{{ url_for('discounts', category='Dairy') }}" class="category-card">
                 <img src="/static/img/milk.png" alt="Dairy">
