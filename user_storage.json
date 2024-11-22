@@ -61,5 +61,12 @@
         "email": "kgawrinauth1@pride.hofstra.edu",
         "phone": "",
         "address": ""
+    },
+    "kevingawrinauth@yahoo.com": {
+        "password": null,
+        "name": "Kevin Gawrinauth",
+        "email": "kevingawrinauth@yahoo.com",
+        "phone": "",
+        "address": ""
     }
 }

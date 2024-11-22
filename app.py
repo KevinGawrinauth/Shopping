@@ -592,31 +592,41 @@ def remove_item_from_cart(username, item_name):
 @login_required
 def add_to_cart():
     user_id = session.get("user_id")
+    if not user_id:
+        flash("User not logged in.", "danger")
+        return redirect(url_for('login'))
+
+    # Retrieve product details from the form
     product_name = request.form.get('product_name')
     product_price = request.form.get('product_price')
     product_image = request.form.get('product_image')
-    category = request.form.get('category')  # Capture the category from the form
+    category = request.form.get('category')  # For redirect after adding to cart
 
-    # Validate and convert product_price
+    # Validate and convert product_price to float
     try:
         product_price = float(product_price)
     except (ValueError, TypeError):
-        # If product_price is invalid, set it to 0.0 and log a warning
-        product_price = 0.0
+        product_price = 0.0  # Default to 0.0 if invalid
         print(f"Warning: Invalid price for {product_name}. Defaulting to 0.0.")
 
-    # Load the user's cart from the JSON file
-    cart = read_cart(user_id)
+    # Load the user's cart data from cart.json
+    cart_data = read_cart(user_id)
 
-    # Check if product is already in cart and update quantity
+    # Ensure cart_items is a list
+    if not isinstance(cart_data.get('cart_items'), list):
+        cart_data['cart_items'] = []
+
+    cart = cart_data['cart_items']
+
+    # Check if the product already exists in the cart
     item_exists = False
     for item in cart:
-        if item['name'] == product_name:
+        if item.get('name') == product_name:
             item['quantity'] += 1
             item_exists = True
             break
 
-    # If it's a new item, add it to the cart
+    # If the product is new, add it to the cart
     if not item_exists:
         cart.append({
             'name': product_name,
@@ -625,14 +635,16 @@ def add_to_cart():
             'quantity': 1
         })
 
-    # Save updated cart to JSON file
-    write_cart(user_id, cart)
+    # Save the updated cart back to cart.json
+    write_cart(user_id, cart_data)
 
-    # Update cart count in the session based on the total quantity of items
+    # Update the session cart count based on the total quantity of items
     session['cart_count'] = sum(item['quantity'] for item in cart)
-    session.modified = True  # Mark session as modified
+    session.modified = True  # Ensure session updates are saved
 
+    flash(f"{product_name} added to your cart.", "success")
     return redirect(url_for('get_products', category=category))
+
 
 from urllib.parse import unquote
 
@@ -666,15 +678,18 @@ def remove_item(index):
 @app.route('/update_quantity/<int:index>/<operation>', methods=['POST'])
 @login_required
 def update_quantity(index, operation):
-    username = session.get('user_id')  # Get the username from the session
+    user_id = session.get('user_id')  # Get the user_id from the session
 
-    if username:
-        # Retrieve the user's cart from JSON
-        user_cart = get_user_cart(username)
+    if user_id:
+        # Retrieve the user's cart data from JSON
+        user_cart_data = read_cart(user_id)
+
+        # Get cart_items from the retrieved cart data
+        cart_items = user_cart_data.get('cart_items', [])
 
         # Ensure the index is within bounds
-        if 0 <= index < len(user_cart):
-            item = user_cart[index]  # Access the specific cart item
+        if 0 <= index < len(cart_items):
+            item = cart_items[index]  # Access the specific cart item
 
             # Handle quantity updates based on the operation
             if operation == 'increase':
@@ -682,12 +697,13 @@ def update_quantity(index, operation):
             elif operation == 'decrease' and item['quantity'] > 1:
                 item['quantity'] -= 1  # Decrement the quantity only if > 1
 
-            # Update the cart data in JSON
-            write_cart(username, user_cart)
+            # Update the user's cart data in JSON
+            user_cart_data['cart_items'] = cart_items  # Update the cart_items
+            write_cart(user_id, user_cart_data)
 
             # Recalculate the total cart count for the session
             session['cart_count'] = sum(
-                item.get('quantity', 1) for item in user_cart
+                item.get('quantity', 1) for item in cart_items
             )  # Default to 1 if quantity is missing
 
             # Mark the session as modified to ensure updates are saved
@@ -700,6 +716,7 @@ def update_quantity(index, operation):
         flash("User not found. Please log in again.", "danger")
 
     return redirect(url_for('view_cart'))
+
 
 @app.route('/cart')
 @login_required
@@ -743,32 +760,47 @@ def logout():
     
     return redirect(url_for('login'))
 
-@app.route('/discounts')
+@app.route('/discounts', defaults={'category': None})
+@app.route('/discounts/<category>')
 @login_required
-def discounts():
-    access_token = get_kroger_token(client_id, client_secret)
+def discounts(category):
+    try:
+        access_token = get_kroger_token(client_id, client_secret)
+    except Exception as e:
+        flash("Error fetching access token.", "danger")
+        return redirect(url_for('home'))
+
     search_url = "https://api.kroger.com/v1/products"
     headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
-    
-    # Fetch products with discount or promo
+
+    # Fetch selected location from locations.json
+    location_id = read_selected_location()
+    if not location_id:
+        flash("No store location selected. Please select a location first.", "warning")
+        return redirect(url_for('home'))
+
+    # Set filter parameters
     params = {
-        'filter.term': 'on sale',  # Filters for items on sale
-        'filter.limit': 5  # Number of items to display
+        'filter.locationId': location_id,  # Include locationId in the query
+        'filter.limit': 50,
+        'filter.start': 0
     }
+
+    if category:
+        params['filter.term'] = category.lower()  # Add category filter if provided
 
     response = requests.get(search_url, headers=headers, params=params)
 
     if response.status_code == 200:
         products = []
         kroger_data = response.json().get('data')
-        
+
         for product in kroger_data:
-            # Handle missing price fields safely using get()
             item = product['items'][0] if product.get('items') else {}
             price = item.get('price', {})
-            promo_price = price.get('promo', 'N/A')  # Default to 'N/A' if missing still trouble with this check with free time
-            regular_price = price.get('regular', 'N/A')  # Default to 'N/A' if missing
-            
+            promo_price = price.get('promo', 'N/A')
+            regular_price = price.get('regular', 'N/A')
+
             product_info = {
                 'name': product.get('description', 'No description'),
                 'price': promo_price,
@@ -776,11 +808,18 @@ def discounts():
                 'imageUrl': product['images'][0]['sizes'][0]['url'] if product.get('images') else '/static/img/default_product.png'
             }
             products.append(product_info)
-        
-        return render_template('discounts.html', products=products)
+
+        # Render a different template for category-specific discounts
+        if category:
+            return render_template('discounts_category.html', category=category.capitalize(), products=products)
+        else:
+            return render_template('discounts.html', products=products)
     else:
-        return jsonify({"error": "Error fetching discounted products"}), 500
-    
+        flash("Error fetching discounted products.", "danger")
+        return redirect(url_for('home'))
+
+
+
     # Route to handle the search functionality with category filtering
 @app.route('/products/<category>')
 @login_required
@@ -859,16 +898,30 @@ def cart_counter():
 @login_required
 def checkout():
     user_id = session.get("user_id")
-    cart_items = read_cart(user_id)  # Retrieve the cart directly from cart.json using user_id
+
+    # Retrieve the cart directly from cart.json using user_id
+    user_data = read_cart(user_id)
+    cart_items = user_data.get("cart_items", []) if isinstance(user_data, dict) else []
 
     # Calculate subtotal and other amounts
-    subtotal = sum(float(item['price']) * item['quantity'] for item in cart_items)
-    total_quantity = sum(item['quantity'] for item in cart_items)
+    try:
+        subtotal = sum(float(item.get('price', 0)) * item.get('quantity', 0) for item in cart_items)
+        total_quantity = sum(item.get('quantity', 0) for item in cart_items)
+    except (ValueError, TypeError, KeyError):
+        subtotal = 0
+        total_quantity = 0
+
     sales_tax_rate = 0.08625
     sales_tax = subtotal * sales_tax_rate
     total_cost = subtotal + sales_tax
 
-    return render_template('checkout.html', cart_items=cart_items, subtotal=subtotal, sales_tax=sales_tax, total_cost=total_cost)
+    return render_template(
+        'checkout.html',
+        cart_items=cart_items,
+        subtotal=subtotal,
+        sales_tax=sales_tax,
+        total_cost=total_cost,
+    )
 
 def send_order_confirmation_email(recipient_email, name, address, city, zip_code):
     # Set up SendGrid API URL and headers
@@ -915,32 +968,33 @@ def process_checkout():
     city = request.form.get('city')
     zip_code = request.form.get('zip')
 
+    user_id = session.get("user_id")
+
     # Try to get the user's email from the session
-    to_email = session.get("user_email")  # Assumes email should be in session
-
-    # If email isn't in the session, load it from user_Storage.json
+    to_email = session.get("user_email")
     if not to_email:
-        users = load_user_storage()  # Load all users from the JSON file
-        user_id = session.get("user_id")  # Assumes user_id is stored in session
-
-        # Retrieve the email from the JSON file using the user ID
+        users = load_user_storage()
         if user_id and user_id in users:
             to_email = users[user_id].get("email")
 
-    print(f"User email for order confirmation: {to_email}")  # Debugging line to verify email
+    print(f"User email for order confirmation: {to_email}")
 
-    # Clear the cart after checkout
-    session.pop('cart', None)
-    session['cart_count'] = 0
-
-    # Send order confirmation email if email is present
+    # Send confirmation email if email is present
     if to_email:
         send_order_confirmation_email(to_email, name, address, city, zip_code)
-        flash("Thank you for your order! A confirmation email has been sent.", "success")
-    else:
-        flash("Order placed successfully, but no email was sent due to missing email address.", "info")
 
+    # Clear the cart in `cart.json`
+    cart_data = read_cart(user_id)
+    cart_data['cart_items'] = []  # Empty the user's cart
+    write_cart(user_id, cart_data)  # Save changes back to the file
+
+    # Clear session cart count
+    session['cart_count'] = 0
+    session.modified = True
+
+    flash("Thank you for your order! A confirmation email has been sent.", "success")
     return redirect(url_for('home'))
+
 
 def read_selected_location():
     if not os.path.exists('locations.json'):

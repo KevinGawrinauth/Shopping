@@ -1,7 +1,21 @@
 {
     "kevin": {
-        "cart_items": [],
-        "saved_items": []
+        "cart_items": [
+            {
+                "name": "Sample Item 1",
+                "price": 5.99,
+                "image": "https://example.com/item1.jpg",
+                "quantity": 2
+            }
+        ],
+        "saved_items": [
+            {
+                "name": "Sample Item 2",
+                "price": 10.99,
+                "image": "https://example.com/item2.jpg",
+                "quantity": 1
+            }
+        ]
     },
     "danny": {
         "cart_items": [],
@@ -13,13 +27,7 @@
                 "name": "Zucchini",
                 "price": 1.69,
                 "image": "https://www.kroger.com/product/images/xlarge/front/0000000004067",
-                "quantity": 1
-            },
-            {
-                "name": "Kroger\u00c2\u00ae Vegetable Medley BIG Deal!",
-                "price": 6.49,
-                "image": "https://www.kroger.com/product/images/xlarge/top/0001111079548",
-                "quantity": 1
+                "quantity": 2
             }
         ],
         "saved_items": []
