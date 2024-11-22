@@ -30,7 +30,6 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 # Initialize Flask-Mail
 mail = Mail(app)
 
-
 import requests
 
 sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
@@ -82,8 +81,6 @@ def reset_password_page():
 
     return render_template('reset_password_updated.html')
 
-
-
 # We created a file to store user data (this simulates a database using mysql lite) x
 USER_FILE = 'user_storage.json'
 
@@ -95,15 +92,15 @@ app.secret_key = b'\xef\xd4\x16\x98h\xc6\xdd\xc3\xc6\xce\x02\xd6@o\x8a|\x08\x1c\
 def load_user_storage():
     try:
         # Load and return the user data from user_Storage.json
-        with open("user_Storage.json", "r") as f:
+        with open("user_storage.json", "r") as f:
             users = json.load(f)
             print("Users loaded successfully:", users)  # Debugging line
             return users
     except FileNotFoundError:
-        print("Error: user_Storage.json file not found.")
+        print("Error: user_storage.json file not found.")
         return {}
     except json.JSONDecodeError:
-        print("Error: user_Storage.json is not a valid JSON file.")
+        print("Error: user_storage.json is not a valid JSON file.")
         return {}
 
 @app.context_processor
@@ -172,27 +169,35 @@ def fetch_locations():
         flash("Error fetching locations.", "danger")
         return redirect(url_for('home'))
 
-
-
-
-
-
-
 # Disable CSRF for testing
 app.config['WTF_CSRF_ENABLED'] = False
 # implemented a helper functions to manage user data in a file
-def read_users():
-    if not os.path.exists(USER_FILE):
-        return {}
-    with open(USER_FILE, 'r') as file:
+def read_users(source='regular'):
+    if source and not os.path.exists(USER_FILE):
+        file_path = 'google_accounts.json'
+    else:
+        file_path = 'user_storage.json'
+    with open(file_path, 'r') as file:
         return json.load(file)
 def read_user(username):
     users = read_users()
     return users.get(username)
 
-def write_users(users):
-    with open(USER_FILE, 'w') as file:
-        json.dump(users, file)
+def write_users(users,source='regular'):
+    file_path = 'google_accounts.json' if source == 'google' else 'user_storage.json'
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            try:
+                existing_users = json.load(file)  # Load existing data
+            except json.JSONDecodeError:
+                existing_users = {}  
+    else:
+        existing_users = {} 
+    
+    existing_users.update(users)
+
+    with open(file_path, 'w') as file:
+        json.dump(existing_users, file, indent=4)
 
 # User class for Flask-Login
 class User(UserMixin):
@@ -218,7 +223,6 @@ class RegistrationForm(FlaskForm):
 # Form for the logout button 
 class LogoutForm(FlaskForm):
     submit = SubmitField('Sign Out')
-    
     
 @app.route('/update_user', methods=['POST'])
 @login_required
@@ -287,8 +291,8 @@ def login():
         # Load users from JSON file
         users = read_users()
         if not users:
-            print("Error: No users loaded from user_Storage.json.")
-            return "User data not loaded. Check user_Storage.json.", 500
+            print("Error: No users loaded from user_storage.json.")
+            return "User data not loaded. Check user_storage.json.", 500
 
         # Check user credentials
         if username in users and users[username]['password'] == password:
@@ -306,63 +310,51 @@ def login():
 
     return render_template('login.html', form=form)
 
-
-
 @app.route('/save_for_later/<int:index>', methods=['POST'])
 @login_required
 def save_for_later(index):
     username = session.get('user_id')
 
     if username:
-        # Retrieve the user's cart from JSON and saved items from the session
-        cart = get_user_cart(username)
-        saved_items = session.get('saved_items', [])
+        # Retrieve the user's data (cart_items and saved_items) from JSON
+        user_data = read_cart(username)
+        cart = user_data.get('cart_items', [])
+        saved_items = user_data.get('saved_items', [])
 
         # Ensure index is valid before moving the item
         if 0 <= index < len(cart):
             item = cart.pop(index)  # Remove the item from cart
             saved_items.append(item)  # Add it to saved items
 
-            # Update both cart in JSON and session data
-            write_cart(username, cart)  # Persist the updated cart to JSON
-            session['saved_items'] = saved_items  # Update saved items in session
+            # Update the user's data in the JSON file
+            write_cart(username, {'cart_items': cart, 'saved_items': saved_items})
 
-            # Mark session as modified to save changes
-            session.modified = True
+            # Recalculate cart counter based on remaining items in the cart
+            session['cart_count'] = sum(item.get('quantity', 1) for item in cart)
+            session.modified = True  # Mark session as modified
 
             flash("Item saved for later.", "info")
         else:
             flash("Item not found in cart.", "danger")
+    else:
+        flash("User not logged in.", "danger")
 
     return redirect(url_for('view_cart'))
-
-
 
 @app.route('/move_to_cart/<int:index>', methods=['POST'])
 @login_required
 def move_to_cart(index):
-    username = session.get('user_id')
-
-    if username:
-        cart = get_user_cart(username)  # Get cart from JSON
-        saved_items = session.get('saved_items', [])
-
-        try:
-            # Move the item from saved items back to cart
-            item = saved_items.pop(index)
-            cart.append(item)
-
-            # Update both cart and saved items
-            write_cart(username, cart)  # Persist updated cart to JSON
-            session['saved_items'] = saved_items  # Update saved items in session
-            session.modified = True
-
-            flash("Item moved back to cart.", "success")
-        except IndexError:
-            flash("Item not found in saved items.", "danger")
-
+    user_id = session.get("user_id")
+    user_data = read_cart(user_id)
+    cart = user_data.get('cart_items', [])
+    saved_items = user_data.get('saved_items', [])
+    if 0 <= index < len(saved_items):
+        item = saved_items.pop(index)
+        cart.append(item)
+        write_cart(user_id, {"cart_items": cart, "saved_items": saved_items})
+        session['cart_count'] = sum(item['quantity'] for item in cart)
+        flash("Item moved back to cart.", "success")
     return redirect(url_for('view_cart'))
-
 
 
 # our guest login route
@@ -439,7 +431,6 @@ def get_favorites():
     favorites = read_favorites()
     return jsonify(favorites)
 
-
 # the route for our user registration
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -497,15 +488,11 @@ def home():
     # Pass selected_location to the index.html template
     return render_template('index.html', username=username, form=form, locations=locations, selected_location=selected_location)
 
-
-
 @app.route('/favorites')
 @login_required
 def view_favorites():
     favorites = read_favorites()  # Retrieve all favorite items directly
     return render_template('favorites.html', favorites=favorites)
-
-
 
 def get_locations():
     access_token = get_kroger_token(client_id, client_secret)
@@ -514,7 +501,6 @@ def get_locations():
     params = {'filter.radiusInMiles': 50}
     response = requests.get(location_url, headers=headers, params=params)
     return response.json().get('data', []) if response.status_code == 200 else []
-
 
 import os
 import json
@@ -540,9 +526,17 @@ CART_FILE = "cart.json"
 def read_cart(user_id):
     if os.path.exists(CART_FILE):
         with open(CART_FILE, 'r') as file:
-            data = json.load(file)
-            return data.get(user_id, [])
-    return []
+            try:
+                data = json.load(file)
+                user_cart = data.get(user_id, {})
+                # Ensure the cart_items key is a list
+                return {
+                    'cart_items': user_cart.get('cart_items', []),
+                    'saved_items': user_cart.get('saved_items', [])
+                }
+            except json.JSONDecodeError:
+                print("Error decoding JSON from cart file.")
+    return {'cart_items': [], 'saved_items': []}  # Default to empty cart structure
 
 # Helper function to write the cart to the file
 def write_cart(user_id, cart):
@@ -560,7 +554,6 @@ def get_user_cart(username):
     """Retrieve the cart for a specific user from the JSON data."""
     cart_data = read_cart(username)  # Pass `username` to read_cart to get specific user's data
     return cart_data
-
 
 def add_item_to_cart(username, item):
     """Add an item to the user's cart in the JSON data."""
@@ -594,7 +587,6 @@ def remove_item_from_cart(username, item_name):
         # Update the user's cart in the overall cart data and save to cart.json
         cart_data[username] = user_cart
         write_cart(username, user_cart)
-
 
 @app.route('/add_to_cart', methods=['POST'])
 @login_required
@@ -642,11 +634,6 @@ def add_to_cart():
 
     return redirect(url_for('get_products', category=category))
 
-
-
-
-from urllib.parse import unquote
-
 from urllib.parse import unquote
 
 @app.route('/remove_item/<int:index>', methods=['POST'])
@@ -655,63 +642,76 @@ def remove_item(index):
     username = session.get('user_id')
 
     if username:
-        # Retrieve the user's cart from cart.json
-        user_cart = get_user_cart(username)
+        # Retrieve the user's cart data (cart_items and saved_items)
+        user_data = read_cart(username)
+        cart = user_data.get('cart_items', [])
 
-        # Ensure the index is within range before removing the item
-        if 0 <= index < len(user_cart):
-            user_cart.pop(index)  # Remove item at the specified index
-            write_cart(username, user_cart)  # Update the cart in cart.json
+        # Validate index range
+        if 0 <= index < len(cart):
+            cart.pop(index)  # Remove the item from the cart
+            write_cart(username, {'cart_items': cart, 'saved_items': user_data.get('saved_items', [])})
 
-            # Update the cart count in the session
-            session['cart_count'] = len(user_cart)
+            # Update cart count in session (sum of quantities)
+            session['cart_count'] = sum(item.get('quantity', 1) for item in cart)
+            session.modified = True
+            flash("Item removed from cart.", "success")
         else:
             flash("Item not found in cart.", "danger")
+    else:
+        flash("User not logged in.", "danger")
 
-    flash("Item removed from cart.", "success")
     return redirect(url_for('view_cart'))
-
-
-
 
 
 @app.route('/update_quantity/<int:index>/<operation>', methods=['POST'])
 @login_required
 def update_quantity(index, operation):
-    username = session.get('user_id')
+    username = session.get('user_id')  # Get the username from the session
 
     if username:
+        # Retrieve the user's cart from JSON
         user_cart = get_user_cart(username)
 
-        # Ensure index is valid
+        # Ensure the index is within bounds
         if 0 <= index < len(user_cart):
-            item = user_cart[index]
-            
-            # Increase or decrease quantity based on operation
-            if operation == 'increase':
-                item['quantity'] += 1
-            elif operation == 'decrease' and item['quantity'] > 1:
-                item['quantity'] -= 1
+            item = user_cart[index]  # Access the specific cart item
 
-            # Update the cart in cart.json
+            # Handle quantity updates based on the operation
+            if operation == 'increase':
+                item['quantity'] += 1  # Increment the quantity
+            elif operation == 'decrease' and item['quantity'] > 1:
+                item['quantity'] -= 1  # Decrement the quantity only if > 1
+
+            # Update the cart data in JSON
             write_cart(username, user_cart)
-            
-            # Update cart count in session if needed
-            session['cart_count'] = sum(item.get('quantity', 1) for item in user_cart)
+
+            # Recalculate the total cart count for the session
+            session['cart_count'] = sum(
+                item.get('quantity', 1) for item in user_cart
+            )  # Default to 1 if quantity is missing
+
+            # Mark the session as modified to ensure updates are saved
+            session.modified = True
+
+            flash("Item quantity updated successfully.", "success")
         else:
-            flash("Item not found in cart.", "danger")
+            flash("Invalid item index. Please try again.", "danger")
+    else:
+        flash("User not found. Please log in again.", "danger")
 
     return redirect(url_for('view_cart'))
-
-
 
 @app.route('/cart')
 @login_required
 def view_cart():
     user_id = session.get("user_id")
-    cart = read_cart(user_id)  # Load cart from JSON file
+    user_data = read_cart(user_id)  # Retrieve user data (cart_items and saved_items) from JSON
 
-    # Ensure all prices are valid floats and handle missing prices
+    # Extract cart_items and initialize saved_items if missing
+    cart = user_data.get('cart_items', [])
+    saved_items = user_data.get('saved_items', [])
+
+    # Ensure all prices in the cart are valid floats
     for item in cart:
         try:
             item['price'] = float(item.get('price', 0))  # Handle missing prices by defaulting to 0
@@ -721,17 +721,18 @@ def view_cart():
     # Calculate the total amount in the cart
     total_amount = sum(item['price'] * item['quantity'] for item in cart)
 
-    return render_template('cart.html', cart=cart, total_amount=total_amount)
-
-
-
+    # Render the template, passing both cart and saved_items
+    return render_template(
+        'cart.html',
+        cart=cart,
+        total_amount=total_amount,
+        saved_items=saved_items
+    )
 
 
 @app.context_processor
 def inject_cart_count():
     return {'cart_count': session.get('cart_count', 0)}
-
-
 
 # Logout route (POST only with CSRF protection)
 @app.route('/logout', methods=['POST'])
@@ -741,7 +742,6 @@ def logout():
     logout_user()  # Log out the user
     
     return redirect(url_for('login'))
-
 
 @app.route('/discounts')
 @login_required
@@ -782,7 +782,6 @@ def discounts():
         return jsonify({"error": "Error fetching discounted products"}), 500
     
     # Route to handle the search functionality with category filtering
-
 @app.route('/products/<category>')
 @login_required
 def get_products(category):
@@ -824,8 +823,7 @@ def get_products(category):
         }
         search_term = category_mapping.get(category, "")
         
-
-    # Set up pagination parameters
+     # Set up page modifications 
     params = {
         'filter.term': search_term,
         'filter.locationId': location_id,
@@ -851,17 +849,11 @@ def get_products(category):
         flash("Error fetching products.", "danger")
         return redirect(url_for('home'))
 
-    
-    
-
-
-
 # Function to retrieve the cart count to use in templates
 @app.context_processor
 def cart_counter():
     cart_count = session.get('cart_count', 0)
     return {'cart_count': cart_count}
-
 
 @app.route('/checkout')
 @login_required
@@ -878,39 +870,42 @@ def checkout():
 
     return render_template('checkout.html', cart_items=cart_items, subtotal=subtotal, sales_tax=sales_tax, total_cost=total_cost)
 
+def send_order_confirmation_email(recipient_email, name, address, city, zip_code):
+    # Set up SendGrid API URL and headers
+    url = "https://api.sendgrid.com/v3/mail/send"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('SENDGRID_API_KEY')}"
+,  # Replace with your SendGrid API Key
+        "Content-Type": "application/json"
+    }
     
-app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'apikey'  # SendGrid requires 'apikey' as the username
-app.config['MAIL_PASSWORD'] = os.getenv('SENDGRID_API_KEY')  # Set your API key here
-app.config['MAIL_DEFAULT_SENDER'] = 'kgawrinauth1@pride.hofstra.edu'
-
-
-
-
-mail = Mail(app)
-def send_order_confirmation_email(to_email, name, address, city, zip_code):
-    try:
-        msg = Message(
-            "Order Confirmation",
-            recipients=[to_email],
-            html=f"""
-                <h2>Order Confirmation</h2>
-                <p>Hello {name},</p>
-                <p>Thank you for your order!</p>
-                <p><strong>Shipping Address:</strong><br>
-                {address}, {city}, {zip_code}</p>
-                <p>We appreciate your business!</p>
-            """
-        )
-        mail.send(msg)
+    # Email data, including the template ID and recipient information
+    data =data = {
+    "personalizations": [
+        {
+            "to": [{"email": recipient_email}],
+            "dynamic_template_data": {
+                "customer_name": name,
+                "address": address,
+                "city": city,
+                "zip_code": zip_code,
+            }
+        }
+    ],
+    "from": {"email": "kgawrinauth1@pride.hofstra.edu"},
+    "template_id": "d-54cbef9f0d5a46c3a5c99a01efb9c0de",
+    "subject": "Order Confirmation"
+}
+    # Send the request
+    response = requests.post(url, headers=headers, json=data)
+    
+    # Check the response
+    if response.status_code == 202:
         print("Order confirmation email sent successfully!")
-    except Exception as e:
-        print("Error while sending email:", e)
+    else:
+        print("Failed to send email. Status Code:", response.status_code)
+        print("Response:", response.json())
 
-
-@app.route('/process_checkout', methods=['POST'])
 @app.route('/process_checkout', methods=['POST'])
 @login_required
 def process_checkout():
@@ -919,7 +914,20 @@ def process_checkout():
     address = request.form.get('address')
     city = request.form.get('city')
     zip_code = request.form.get('zip')
-    to_email = session.get("user_email")  # Assumes user's email is stored in session
+
+    # Try to get the user's email from the session
+    to_email = session.get("user_email")  # Assumes email should be in session
+
+    # If email isn't in the session, load it from user_Storage.json
+    if not to_email:
+        users = load_user_storage()  # Load all users from the JSON file
+        user_id = session.get("user_id")  # Assumes user_id is stored in session
+
+        # Retrieve the email from the JSON file using the user ID
+        if user_id and user_id in users:
+            to_email = users[user_id].get("email")
+
+    print(f"User email for order confirmation: {to_email}")  # Debugging line to verify email
 
     # Clear the cart after checkout
     session.pop('cart', None)
@@ -934,16 +942,12 @@ def process_checkout():
 
     return redirect(url_for('home'))
 
-
-
-
 def read_selected_location():
     if not os.path.exists('locations.json'):
         return None
     with open('locations.json', 'r') as file:
         data = json.load(file)
     return data.get('selected_location', None)
-
 
 @app.route('/account_info')
 @login_required
@@ -975,19 +979,16 @@ def loyalty_rewards():
         "next_tier_name": "Platinum",
         "points_to_next_tier": 3000 - 1200  # Calculate remaining points needed
     }
-
     rewards_history = [
         {"date": "2024-10-15", "description": "Redeemed 10% off coupon", "points_used": 100},
         {"date": "2024-09-30", "description": "Free delivery voucher", "points_used": 50},
         {"date": "2024-09-20", "description": "5% off on next purchase", "points_used": 80},
     ]
-
     return render_template(
         'loyalty_rewards.html',
         rewards_info=rewards_info,
         rewards_history=rewards_history
     )
-
 
 @app.context_processor
 def inject_locations():
@@ -1010,17 +1011,10 @@ def inject_locations():
     
     return {'locations': session.get('locations', [])}
 
-
-
 @app.route('/faq')
 def faq():
     return render_template('faq.html')
 
-from flask import Flask, request, jsonify
-from google.cloud import translate_v2 as translate
-import os
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/Users/kevingawrinauth/grocery_app/rising-cable-441021-b1-337bc9fa13da.json'
-translate_client = translate.Client()
 
 
 @app.route('/translate', methods=['POST'])
@@ -1061,6 +1055,91 @@ def inject_selected_location_and_locations():
 
     # Inject selected location and locations data into the template context
     return {'selected_location': selected_location, 'locations': locations}
+
+GOOGLE_CLIENT_ID = '948980706830-8ff2bi5o0lupforj4u8h5odjs66krb1p.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET = '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'
+CONF_URL = 'https://accounts.google.com/.well-known/openid-configuration'
+
+from authlib.integrations.flask_client import OAuth
+import uuid
+
+# Initialize OAuth
+oauth = OAuth(app)
+oauth.register(
+    name='google',
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    server_metadata_url=CONF_URL,
+    client_kwargs={'scope': 'openid email profile'}
+)
+
+
+# Google Authentication
+@app.route('/google/')
+def google():
+    # Redirect to google_auth function
+    nonce = uuid.uuid4().hex
+    session['nonce'] = nonce
+    redirect_uri = url_for('google_auth', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri,nonce=nonce)
+
+@app.route('/google/auth/')
+def google_auth():
+    token = oauth.google.authorize_access_token()
+    nonce = session.pop('nonce', None)
+
+    if nonce is None:
+        flash("Invalid session. Please try logging in again.", "error")
+        return redirect(url_for('login'))
+
+    user_info = oauth.google.parse_id_token(token, nonce=nonce)
+    if user_info:
+        user_id = user_info.get('email')  # Use email as the unique identifier
+        users = read_users()  # Load users from user_storage.json
+
+        # If the user doesn't exist, create a new entry in user_storage.json
+        if user_id not in users:
+            users[user_id] = {
+                "password": None,  # Google accounts don't use passwords
+                "name": user_info.get('name', ""),
+                "email": user_info.get('email', ""),
+                "phone": "",  # Default empty phone field
+                "address": "",  # Default empty address field
+            }
+            write_users(users)  # Save to user_storage.json
+
+        # Log the user in
+        user = User(user_id)
+        login_user(user)
+        session['user_id'] = user_id
+
+        # Initialize cart count in session
+        user_data = read_cart(user_id)  # Read the user's cart
+        cart = user_data.get('cart_items', [])
+
+        # Validate that cart is a list of dictionaries
+        if isinstance(cart, list) and all(isinstance(item, dict) for item in cart):
+            session['cart_count'] = sum(item.get('quantity', 1) for item in cart)
+        else:
+            session['cart_count'] = 0  # Default to 0 if cart structure is invalid
+
+        flash(f"Welcome, {user_info.get('name')}!", "success")
+        return redirect(url_for('home'))
+    else:
+        flash("Failed to retrieve user information from Google.", "danger")
+        return redirect(url_for('login'))
+
+    
+@app.route('/saved_items')
+@login_required
+def view_saved_items():
+    user_id = session.get("user_id")
+    cart_data = read_cart(user_id)
+    saved_items = cart_data.get("saved_items", [])
+
+    return render_template('saved_items.html', saved_items=saved_items)
+
+
 
 
 

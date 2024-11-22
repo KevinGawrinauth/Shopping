@@ -1,11 +1,27 @@
 {
-    "kevin": [],
-    "danny": [
-        {
-            "name": "Goya\u00ae Hawaiian Tostones",
-            "price": "7.99",
-            "image": "https://www.kroger.com/product/images/xlarge/front/0004133109392",
-            "quantity": 1
-        }
-    ]
+    "kevin": {
+        "cart_items": [],
+        "saved_items": []
+    },
+    "danny": {
+        "cart_items": [],
+        "saved_items": []
+    },
+    "kgawrinauth1@pride.hofstra.edu": {
+        "cart_items": [
+            {
+                "name": "Zucchini",
+                "price": 1.69,
+                "image": "https://www.kroger.com/product/images/xlarge/front/0000000004067",
+                "quantity": 1
+            },
+            {
+                "name": "Kroger\u00c2\u00ae Vegetable Medley BIG Deal!",
+                "price": 6.49,
+                "image": "https://www.kroger.com/product/images/xlarge/top/0001111079548",
+                "quantity": 1
+            }
+        ],
+        "saved_items": []
+    }
 }

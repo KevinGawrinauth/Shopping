@@ -181,27 +181,27 @@
         </div>
 
         <!-- Save for Later Section -->
-        <div class="save-for-later">
-            <h3>Save for Later</h3>
-            {% if session.saved_items %}
-                {% for item in session.saved_items %}
-                    <div class="save-item">
-                        <img src="{{ item['image'] }}" alt="{{ item['name'] }}">
-                        <div>
-                            <h6>{{ item['name'] }}</h6>
-                            <p>Price: ${{ item['price'] }}</p>
-                        </div>
-                        <!-- Move to Cart Button -->
-                        <form action="{{ url_for('move_to_cart', index=loop.index0) }}" method="POST">
-                            <button type="submit" class="btn-move-to-cart">Move to Cart</button>
-                        </form>
+      <!-- Save for Later Section -->
+      <div class="save-for-later">
+        <h3>Saved for Later</h3>
+        {% if saved_items %}
+            {% for item in saved_items %}
+                <div class="save-item">
+                    <img src="{{ item['image'] }}" alt="{{ item['name'] }}">
+                    <div>
+                        <h6>{{ item['name'] }}</h6>
+                        <p>Price: ${{ '%.2f' | format(item['price']) }}</p>
                     </div>
-                {% endfor %}
-            {% else %}
-                <p>No items saved for later.</p>
-            {% endif %}
-        </div>
+                    <form action="{{ url_for('move_to_cart', index=loop.index0) }}" method="POST">
+                        <button type="submit" class="btn-move-to-cart">Move to Cart</button>
+                    </form>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No items saved for later.</p>
+        {% endif %}
     </div>
+</div>
 
     <!-- Include Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
