@@ -3,109 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discounted Categories - GreenGrocer</title>
+    <title>{{ category }} Discounts - GreenGrocer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
+            background-color: #f8f9fa;
             font-family: Arial, sans-serif;
-            background-image: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)), url('/static/img/veggie_background2.0.jpg');
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-attachment: fixed;
-            color: #333;
-            padding-bottom: 70px;
         }
 
-        .category-container {
+        h2 {
+            margin-top: 20px;
+            color: #007f0e;
+            font-weight: bold;
+        }
+
+        .discount-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-around;
-            padding: 0 20px;
+            padding: 10px 0;
         }
 
-        .category-card {
-            background-color: #d9d9d9;
-            width: 180px;
-            margin: 15px;
+        .discount-card {
+            background-color: #fff;
+            width: 150px;
+            margin: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
             text-align: center;
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-            text-decoration: none;
+            padding: 10px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .category-card:hover {
+        .discount-card:hover {
             transform: scale(1.05);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
-        .category-card img {
-            width: 130px;
+        .discount-card img {
+            width: 100px;
             height: 100px;
             object-fit: cover;
-            margin-bottom: 10px;
+            border-radius: 5px;
+            margin-bottom: 8px;
         }
 
-        .category-card h4 {
-            font-size: 16px;
+        .discount-card h4 {
+            font-size: 14px;
             color: #333;
+            margin-bottom: 5px;
+            height: 38px; /* Limit the height for consistency */
+            overflow: hidden;
+        }
+
+        .discount-card p {
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        .price {
+            color: #ff4d4d;
+            font-weight: bold;
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 12px;
+        }
+
+        .discount-footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #555;
         }
     </style>
 </head>
 <body>
     {% include 'topheader.html' %}
 
-    <div class="container mt-5">
-        <h2 class="text-center">Discounted Categories</h2>
-        <div class="category-container">
-            <a href="{{ url_for('discounts', category='Vegetables') }}" class="category-card">
-                <img src="/static/img/vegetables.png" alt="Vegetables">
-                <h4>Vegetables</h4>
-            </a>            
-            <a href="{{ url_for('discounts', category='Meats') }}" class="category-card">
-                <img src="/static/img/meats.png" alt="Meats">
-                <h4>Meats</h4>
-            </a>
-            <a href="{{ url_for('discounts', category='Fruits') }}" class="category-card">
-                <img src="/static/img/fruits.png" alt="Fruits">
-                <h4>Fruits</h4>
-            </a>
-            <a href="{{ url_for('discounts', category='Drinks') }}" class="category-card">
-                <img src="/static/img/drinks.png" alt="Drinks">
-                <h4>Drinks</h4>
-            </a>
-            <a href="{{ url_for('discounts', category='Frozen') }}" class="category-card">
-                <img src="/static/img/frozen.png" alt="Frozen">
-                <h4>Frozen</h4>
-            </a>
+    <div class="container mt-4">
+        <h2 class="text-center">{{ category }} Discounts</h2>
+        <div class="discount-container">
+            {% for product in products %}
+            <div class="discount-card">
+                <img src="{{ product['imageUrl'] }}" alt="{{ product['name'] }}">
+                <h4>{{ product['name'] }}</h4>
+                <p>
+                    <span class="price">${{ product['price'] }}</span>
+                    {% if product['original_price'] != 'N/A' %}
+                    <span class="original-price">${{ product['original_price'] }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
         </div>
-        <div class="category-container">
-            <a href="{{ url_for('discounts', category='Dairy') }}" class="category-card">
-                <img src="/static/img/milk.png" alt="Dairy">
-                <h4>Dairy</h4>
-            </a>
-            <a href="{{ url_for('discounts', category='Bread') }}" class="category-card">
-                <img src="/static/img/bread.png" alt="Bread">
-                <h4>Bread</h4>
-            </a>
-            <a href="{{ url_for('discounts', category='Canned') }}" class="category-card">
-                <img src="/static/img/canned_foods.png" alt="Canned Foods">
-                <h4>Canned Foods</h4>
-            </a>
-            <a href="{{ url_for('discounts', category='Snacks') }}" class="category-card">
-                <img src="/static/img/snacks.png" alt="Snacks">
-                <h4>Snacks</h4>
-            </a>
-            <a href="{{ url_for('discounts', category='PersonalCare') }}" class="category-card">
-                <img src="/static/img/personalcare.png" alt="Personal Care">
-                <h4>Personal Care</h4>
-            </a>
+        <div class="discount-footer">
+            <p>Explore more great deals in other categories!</p>
         </div>
     </div>
 
     {% include 'bottom_navigation.html' %}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

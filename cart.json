@@ -1,6 +1,43 @@
 {
     "kevin": {
-        "cart_items": [],
+        "cart_items": [
+            {
+                "name": "Birds Eye Teriyaki Frozen Stir Fry Veggies And Sauce Frozen Vegetables",
+                "price": 4.49,
+                "image": "https://www.kroger.com/product/images/xlarge/back/0001450003158",
+                "quantity": 1
+            },
+            {
+                "name": "Kroger\u00ae Ground Beef 93/7",
+                "price": 8.79,
+                "image": "https://www.kroger.com/product/images/xlarge/front/0001111096920",
+                "quantity": 1
+            },
+            {
+                "name": "Simple Truth\u00ae Whole Roasted Chicken (Available 11AM-7PM)",
+                "price": 9.99,
+                "image": "https://www.kroger.com/product/images/xlarge/front/0001111006806",
+                "quantity": 1
+            },
+            {
+                "name": "Oikos\u00ae Triple Banana Cr\u00e8me Nonfat Greek Yogurt",
+                "price": 1.49,
+                "image": "https://www.kroger.com/product/images/xlarge/front/0003663200839",
+                "quantity": 2
+            },
+            {
+                "name": "Private Selection\u00ae Angus Ground Chuck 80/20",
+                "price": 7.29,
+                "image": "https://www.kroger.com/product/images/xlarge/back/0001111097139",
+                "quantity": 2
+            },
+            {
+                "name": "Private Selection\u00ae Sourdough Bread Wide Pan",
+                "price": 3.49,
+                "image": "https://www.kroger.com/product/images/xlarge/right/0001111008504",
+                "quantity": 2
+            }
+        ],
         "saved_items": []
     },
     "danny": {

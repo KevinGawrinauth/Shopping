@@ -613,6 +613,7 @@ def add_to_cart():
     product_price = request.form.get('product_price')
     product_image = request.form.get('product_image')
     category = request.form.get('category')  # For redirect after adding to cart
+    product_quantity = request.form.get('product_quantity', 1)  # Default to 1 if not provided
 
     # Validate and convert product_price to float
     try:
@@ -620,6 +621,13 @@ def add_to_cart():
     except (ValueError, TypeError):
         product_price = 0.0  # Default to 0.0 if invalid
         print(f"Warning: Invalid price for {product_name}. Defaulting to 0.0.")
+
+    # Validate and convert product_quantity to int
+    try:
+        product_quantity = int(product_quantity)
+    except (ValueError, TypeError):
+        product_quantity = 1  # Default to 1 if invalid
+        print(f"Warning: Invalid quantity for {product_name}. Defaulting to 1.")
 
     # Load the user's cart data from cart.json
     cart_data = read_cart(user_id)
@@ -634,7 +642,7 @@ def add_to_cart():
     item_exists = False
     for item in cart:
         if item.get('name') == product_name:
-            item['quantity'] += 1
+            item['quantity'] += product_quantity  # Update quantity based on form input
             item_exists = True
             break
 
@@ -644,7 +652,7 @@ def add_to_cart():
             'name': product_name,
             'price': product_price,
             'image': product_image,
-            'quantity': 1
+            'quantity': product_quantity  # Set quantity from form input
         })
 
     # Save the updated cart back to cart.json
@@ -654,7 +662,7 @@ def add_to_cart():
     session['cart_count'] = sum(item['quantity'] for item in cart)
     session.modified = True  # Ensure session updates are saved
 
-    flash(f"{product_name} added to your cart.", "success")
+    flash(f"{product_quantity}x {product_name} added to your cart.", "success")
     return redirect(url_for('get_products', category=category))
 
 
@@ -775,7 +783,6 @@ def logout():
 
 
 
-    # Route to handle the search functionality with category filtering
 @app.route('/products/<category>')
 @login_required
 def get_products(category):
@@ -816,8 +823,8 @@ def get_products(category):
             "PersonalCare": "personal care"
         }
         search_term = category_mapping.get(category, "")
-        
-     # Set up page modifications 
+
+    # Set up page modifications
     params = {
         'filter.term': search_term,
         'filter.locationId': location_id,
@@ -829,11 +836,28 @@ def get_products(category):
 
     if response.status_code == 200:
         products = response.json().get('data', [])
-        has_next_page = len(products) == 50  # Check if there's another page
+
+        # Validate product data
+        validated_products = []
+        for product in products:
+            product_data = {
+                'description': product.get('description', 'No description'),
+                'images': product.get('images', [{'sizes': [{'url': '/static/img/default_image.png'}]}]),
+                'items': product.get('items', [{'price': {'regular': 'N/A'}}]),
+                'delivery_date': product.get('delivery_date', 'Tomorrow'),
+            }
+
+            # Ensure all nested data exists
+            if not product_data['images'][0].get('sizes'):
+                product_data['images'][0]['sizes'] = [{'url': '/static/img/default_image.png'}]
+
+            validated_products.append(product_data)
+
+        has_next_page = len(validated_products) == 50  # Check if there's another page
 
         return render_template(
             'products.html',
-            products=products,
+            products=validated_products,
             category=category if not query else "Search Results",
             page=page,
             has_next_page=has_next_page,
@@ -843,6 +867,7 @@ def get_products(category):
         flash("Error fetching products.", "danger")
         return redirect(url_for('home'))
 
+
 # Function to retrieve the cart count to use in templates
 @app.context_processor
 def cart_counter():
@@ -850,11 +875,11 @@ def cart_counter():
     return {'cart_count': cart_count}
 
 @app.route('/discounts', methods=['GET'])
-@app.route('/discounts/<category>', methods=['GET'])
+@app.route('/discounts/<string:category>', methods=['GET'])
 @login_required
 def discounts(category=None):
     """
-    Render discounts.html for general discounts or discounts_category.html for specific categories.
+    Render discounts.html for general discounts or category_discounts.html for specific categories.
     """
     try:
         access_token = get_kroger_token(client_id, client_secret)
@@ -875,12 +900,14 @@ def discounts(category=None):
     params = {
         'filter.locationId': location_id,
         'filter.limit': 50,
-        'filter.start': 0
+       
     }
 
-    # Add category filter if specified
+    # Add filter for category-specific discounts or general discounts
     if category:
-        params['filter.term'] = category.lower()
+        params['filter.term'] = category.lower()  # Filter by category
+    else:
+        params['filter.term'] = 'on sale'  # General filter for discounted items
 
     # Fetch discounted products
     response = requests.get(search_url, headers=headers, params=params)
@@ -903,14 +930,16 @@ def discounts(category=None):
             }
             products.append(product_info)
 
-        # Render discounts.html for general view, or discounts_category.html for specific category
+        # Render the correct template
         if category:
-            return render_template('discounts_category.html', category=category.capitalize(), products=products)
+            return render_template('category_discounts.html', category=category.capitalize(), products=products)
         else:
             return render_template('discounts.html', products=products)
     else:
         flash("Error fetching discounted products. Please try again.", "danger")
         return redirect(url_for('home'))
+
+
 
 
 
